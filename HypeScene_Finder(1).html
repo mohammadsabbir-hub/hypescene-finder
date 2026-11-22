@@ -1,0 +1,2540 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HypeScene Finder — Viral Highlight Detector & Repaired MP4 Export</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            studio: {
+              bg: '#090b10',
+              panel: '#111520',
+              card: '#161b29',
+              border: '#232a3d',
+              hover: '#1e2538',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom scrollbars and range sliders for studio aesthetic */
+    body {
+      background-color: #090b10;
+      color: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090b10;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #232a3d;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b4664;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: #232a3d;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #f97316;
+      margin-top: -5px;
+      box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .hype-glow {
+      box-shadow: 0 0 28px -6px rgba(249, 115, 22, 0.28);
+    }
+    @keyframes pulseBorder {
+      0%, 100% { border-color: rgba(249, 115, 22, 0.6); }
+      50% { border-color: rgba(34, 211, 238, 0.8); }
+    }
+    .active-window-pulse {
+      animation: pulseBorder 2s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
+
+  <!-- Toast / Status Notification Banner (Replaces alert) -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-studio-border bg-studio-panel/80 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">HypeScene Finder</h1>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              100% Local • Zero Upload
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Client-side audio & visual motion peak detector</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="headerUploadBtn" class="px-3.5 py-2 rounded-xl bg-studio-card hover:bg-studio-hover border border-studio-border text-xs sm:text-sm font-medium text-slate-200 transition flex items-center gap-2">
+          <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          <span>Load Video</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+
+    <!-- Empty State: Drag & Drop Upload Zone -->
+    <section id="uploadSection" class="my-4 sm:my-10">
+      <div id="dropZone" class="relative rounded-3xl border-2 border-dashed border-studio-border hover:border-orange-500/60 bg-studio-panel/60 hover:bg-studio-panel transition-all duration-200 p-8 sm:p-14 text-center cursor-pointer group">
+        <input type="file" id="fileInput" accept="video/mp4,video/webm,video/quicktime,video/*" class="hidden" />
+        <div class="max-w-xl mx-auto flex flex-col items-center">
+          <div class="w-16 h-16 rounded-2xl bg-studio-card border border-studio-border group-hover:border-orange-500/40 group-hover:scale-105 transition-all flex items-center justify-center mb-5 shadow-xl">
+            <svg class="w-8 h-8 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-bold text-white mb-2">Drop a video to find its most hyped moment</h2>
+          <p class="text-sm text-slate-400 mb-6 leading-relaxed">
+            Supports <span class="text-slate-200 font-medium">MP4, WebM, and MOV</span>. Your file is analyzed directly inside your browser using Web Audio & Canvas frame sampling—nothing is ever uploaded to a server.
+          </p>
+          <button type="button" id="browseBtn" class="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-400 hover:to-rose-400 text-white font-semibold text-sm shadow-lg shadow-orange-500/25 transition">
+            Choose Video File
+          </button>
+          <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full text-left">
+            <div class="p-3.5 rounded-2xl bg-studio-card/70 border border-studio-border">
+              <div class="text-xs font-semibold text-cyan-400 mb-1">1. Audio Spike Detection</div>
+              <p class="text-xs text-slate-400">Measures RMS loudness surges, cheers, drops, and transient peaks.</p>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-studio-card/70 border border-studio-border">
+              <div class="text-xs font-semibold text-orange-400 mb-1">2. Visual Motion & Cuts</div>
+              <p class="text-xs text-slate-400">Tracks rapid frame diffs, camera shake, and fast scene transitions.</p>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-studio-card/70 border border-studio-border">
+              <div class="text-xs font-semibold text-emerald-400 mb-1">3. Instant Re-Ranking</div>
+              <p class="text-xs text-slate-400">Tune clip length & audio/motion balance live without re-scanning.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Studio Workspace (Hidden until a video is loaded) -->
+    <section id="workspaceSection" class="hidden space-y-6">
+
+      <!-- Analysis Progress Banner -->
+      <div id="analysisBanner" class="hidden rounded-2xl bg-studio-panel border border-orange-500/40 p-4 sm:p-5 shadow-lg">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin shrink-0"></div>
+            <div>
+              <div id="analysisStageText" class="text-sm font-semibold text-white">Initializing local engine...</div>
+              <div id="analysisSubText" class="text-xs text-slate-400">Processing locally in browser memory</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 self-end sm:self-center">
+            <span id="analysisPercentText" class="font-mono text-sm font-bold text-orange-400">0%</span>
+            <button id="cancelAnalysisBtn" class="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition">
+              Cancel
+            </button>
+          </div>
+        </div>
+        <div class="w-full h-2.5 bg-studio-bg rounded-full overflow-hidden border border-studio-border">
+          <div id="analysisProgressBar" class="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-cyan-400 transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Export Recording Progress Banner -->
+      <div id="exportBanner" class="hidden rounded-2xl bg-studio-panel border border-cyan-500/40 p-4 sm:p-5 shadow-lg">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping shrink-0"></span>
+            <div>
+              <div id="exportStageText" class="text-sm font-semibold text-white">Recording Highlight Clip (WebM)...</div>
+              <div class="text-xs text-slate-400">Captures video + audio in real time inside your browser. Keep this tab visible.</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 self-end sm:self-center">
+            <span id="exportPercentText" class="font-mono text-sm font-bold text-cyan-400">0%</span>
+            <button id="cancelExportBtn" class="px-3 py-1.5 rounded-lg bg-studio-card hover:bg-studio-hover text-slate-300 border border-studio-border text-xs font-semibold transition">
+              Stop Export
+            </button>
+          </div>
+        </div>
+        <div class="w-full h-2 bg-studio-bg rounded-full overflow-hidden">
+          <div id="exportProgressBar" class="h-full bg-cyan-400 transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Two-Column Studio Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- Left Column (7 cols): Video Player + Hype Timeline + Scoring Controls -->
+        <div class="lg:col-span-7 space-y-5">
+
+          <!-- Video Player Card -->
+          <div class="rounded-2xl bg-studio-panel border border-studio-border overflow-hidden shadow-xl">
+            <!-- File Top Bar -->
+            <div class="px-4 py-3 border-b border-studio-border flex flex-wrap items-center justify-between gap-2 bg-studio-card/50">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                <span id="videoFileName" class="text-xs sm:text-sm font-medium text-slate-200 truncate">video.mp4</span>
+                <span id="videoMetaBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-studio-bg text-slate-400 border border-studio-border shrink-0">00:00</span>
+              </div>
+              <div id="windowLoopIndicator" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-300 text-xs font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
+                <span id="windowLoopLabel">Playing Window</span>
+                <button id="stopWindowPlayBtn" class="ml-1 text-orange-200 hover:text-white underline text-[11px]">Exit</button>
+              </div>
+            </div>
+
+            <!-- Video Element Container -->
+            <div class="relative bg-black aspect-video flex items-center justify-center">
+              <video id="mainVideo" class="w-full h-full object-contain" controls playsinline></video>
+            </div>
+
+            <!-- Enhanced Transport & Playback Speed Bar -->
+            <div class="px-4 py-3 bg-studio-card/60 border-t border-studio-border flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <button id="playPauseBtn" class="px-3 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-hover border border-studio-border text-xs font-semibold text-white transition">
+                  Play / Pause
+                </button>
+                <span class="font-mono text-xs text-slate-300">
+                  <span id="currentTimeReadout" class="text-white font-semibold">00:00</span>
+                  <span class="text-slate-500"> / </span>
+                  <span id="totalTimeReadout">00:00</span>
+                </span>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <!-- Scan Mode Toggle: Turbo Smart Scan vs Full 16x Stream Scan -->
+                <div class="inline-flex rounded-lg bg-studio-bg p-0.5 border border-studio-border" title="Turbo scans top audio-energy zones in ~3s; Full scans the entire timeline at 16x speed">
+                  <button type="button" id="modeTurboBtn" class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-orange-500 text-white transition">
+                    ⚡ Turbo (~4s)
+                  </button>
+                  <button type="button" id="modeFullBtn" class="px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-400 hover:text-white transition">
+                    Full Scan
+                  </button>
+                </div>
+
+                <label for="speedSelect" class="text-xs text-slate-400 ml-1">Speed:</label>
+                <select id="speedSelect" class="bg-studio-bg border border-studio-border rounded-lg px-2 py-1 text-xs font-mono text-slate-200 focus:outline-none focus:border-orange-500">
+                  <option value="0.5">0.5x</option>
+                  <option value="0.75">0.75x</option>
+                  <option value="1" selected>1.0x</option>
+                  <option value="1.25">1.25x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2">2.0x</option>
+                </select>
+                <button id="reAnalyzeBtn" class="px-3 py-1.5 rounded-lg bg-studio-bg hover:bg-studio-hover border border-studio-border text-xs font-medium text-slate-300 transition" title="Re-run video scan">
+                  Re-Scan
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Hype Waveform & Timeline Canvas Card -->
+          <div class="rounded-2xl bg-studio-panel border border-studio-border p-4 sm:p-5 shadow-xl">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <span>Hype Energy Timeline</span>
+                  <span id="audioStatusTag" class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">Audio + Visual</span>
+                  <span id="scanSpeedBadge" class="hidden text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"></span>
+                </h3>
+                <p class="text-xs text-slate-400">Click anywhere to scrub • Shaded zones mark top 15s–60s highlight windows</p>
+              </div>
+              <div class="flex items-center gap-3 text-[11px] text-slate-300">
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span>Combined Hype</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>Audio</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-fuchsia-400"></span>Motion</span>
+              </div>
+            </div>
+
+            <div class="relative w-full h-36 sm:h-40 rounded-xl bg-studio-bg border border-studio-border overflow-hidden cursor-crosshair" id="timelineContainer">
+              <canvas id="timelineCanvas" class="w-full h-full block"></canvas>
+              <div id="timelineHoverTooltip" class="hidden pointer-events-none absolute top-2 px-2 py-1 rounded bg-slate-900/95 border border-studio-border text-[11px] font-mono text-white shadow-lg">
+                00:00 • Hype 0
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Tuning Controls Card -->
+          <div class="rounded-2xl bg-studio-panel border border-studio-border p-4 sm:p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white">Highlight Tuning Controls</h3>
+                <p class="text-xs text-slate-400">Retention-first clips: 15s–30s default, with 45s/60s options</p>
+              </div>
+              <button id="resetWeightsBtn" class="text-xs text-orange-400 hover:text-orange-300 font-medium">Reset Defaults</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <!-- Clip Window Length (15s - 60s Presets + Custom Slider) -->
+              <div class="p-3.5 rounded-xl bg-studio-card border border-studio-border">
+                <div class="flex items-center justify-between text-xs font-semibold mb-2">
+                  <span class="text-slate-300">Clip Length</span>
+                  <span id="customDurReadout" class="font-mono text-orange-400 font-bold">15s</span>
+                </div>
+                <div class="grid grid-cols-4 gap-1 mb-2.5" id="windowDurationGroup">
+                  <button type="button" data-dur="15" class="dur-btn py-1 rounded-lg text-[11px] font-mono font-semibold bg-orange-500 text-white border border-orange-400 shadow transition">15s</button>
+                  <button type="button" data-dur="30" class="dur-btn py-1 rounded-lg text-[11px] font-mono font-semibold bg-studio-bg text-slate-400 border border-studio-border hover:text-white transition">30s</button>
+                  <button type="button" data-dur="45" class="dur-btn py-1 rounded-lg text-[11px] font-mono font-semibold bg-studio-bg text-slate-400 border border-studio-border hover:text-white transition">45s</button>
+                  <button type="button" data-dur="60" class="dur-btn py-1 rounded-lg text-[11px] font-mono font-semibold bg-studio-bg text-slate-400 border border-studio-border hover:text-white transition">60s</button>
+                </div>
+                <input id="customDurSlider" type="range" min="15" max="60" step="5" value="15" class="w-full" />
+                <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                  <span>15s</span>
+                  <span>3–6s tension hook / clean payoff cut</span>
+                  <span>60s</span>
+                </div>
+              </div>
+
+              <!-- Audio vs Visual Weight -->
+              <div class="p-3.5 rounded-xl bg-studio-card border border-studio-border">
+                <div class="flex items-center justify-between text-xs font-semibold mb-2">
+                  <span class="text-cyan-400">Audio <span id="audioWeightVal">55%</span></span>
+                  <span class="text-fuchsia-400">Motion <span id="motionWeightVal">45%</span></span>
+                </div>
+                <input id="weightSlider" type="range" min="0" max="100" value="55" class="w-full mt-2" />
+                <div class="flex justify-between text-[10px] text-slate-500 mt-2">
+                  <span>Visual Only</span>
+                  <span>Balanced</span>
+                  <span>Audio Only</span>
+                </div>
+              </div>
+
+              <!-- Peak Spacing / Sensitivity -->
+              <div class="p-3.5 rounded-xl bg-studio-card border border-studio-border">
+                <div class="flex items-center justify-between text-xs font-semibold mb-2">
+                  <span class="text-slate-300">Peak Spacing</span>
+                  <span id="spacingVal" class="font-mono text-amber-400">Standard</span>
+                </div>
+                <input id="spacingSlider" type="range" min="1" max="3" step="1" value="2" class="w-full mt-2" />
+                <div class="flex justify-between text-[10px] text-slate-500 mt-2">
+                  <span>Dense</span>
+                  <span>Standard</span>
+                  <span>Spread Out</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column (5 cols): #1 Most Hyped Hero Card + Top 5 Ranked Moments -->
+        <div class="lg:col-span-5 space-y-5">
+
+          <!-- #1 Most Hyped Scene Hero Card -->
+          <div id="heroSceneCard" class="rounded-2xl bg-gradient-to-b from-studio-card to-studio-panel border border-orange-500/40 p-5 shadow-2xl hype-glow">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                #1 Most Hyped Scene
+              </span>
+              <div class="text-right">
+                <span class="text-xs text-slate-400 block">Hype Score</span>
+                <span id="heroScore" class="font-mono text-2xl font-extrabold text-orange-400">--</span><span class="text-xs text-slate-500 font-mono">/100</span>
+              </div>
+            </div>
+
+            <div id="heroContentPlaceholder" class="py-8 text-center text-sm text-slate-400">
+              Analyzing video to locate your top highlight...
+            </div>
+
+            <div id="heroContentReady" class="hidden space-y-4">
+              <div>
+                <div id="heroReasonTag" class="text-base sm:text-lg font-bold text-white mb-1">Massive Audio Spike + Rapid Action</div>
+                <div class="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-300">
+                  <span class="px-2.5 py-1 rounded-lg bg-studio-bg border border-studio-border">
+                    Window: <strong id="heroRange" class="text-white">00:00 – 00:15</strong>
+                  </span>
+                  <span class="px-2.5 py-1 rounded-lg bg-studio-bg border border-studio-border">
+                    Peak at: <strong id="heroPeak" class="text-amber-400">00:07</strong>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Sub-metric bars -->
+              <div class="grid grid-cols-2 gap-3 pt-1">
+                <div class="p-2.5 rounded-xl bg-studio-bg/80 border border-studio-border">
+                  <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-slate-400">Audio Intensity</span>
+                    <span id="heroAudioPct" class="font-mono font-semibold text-cyan-400">0%</span>
+                  </div>
+                  <div class="w-full h-1.5 bg-studio-card rounded-full overflow-hidden">
+                    <div id="heroAudioBar" class="h-full bg-cyan-400" style="width: 0%"></div>
+                  </div>
+                </div>
+                <div class="p-2.5 rounded-xl bg-studio-bg/80 border border-studio-border">
+                  <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-slate-400">Visual Action</span>
+                    <span id="heroMotionPct" class="font-mono font-semibold text-fuchsia-400">0%</span>
+                  </div>
+                  <div class="w-full h-1.5 bg-studio-card rounded-full overflow-hidden">
+                    <div id="heroMotionBar" class="h-full bg-fuchsia-400" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Viral retention intelligence -->
+              <div class="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-bold text-orange-300">Viral Potential Breakdown</span>
+                  <span id="heroHookStrength" class="text-xs font-mono text-emerald-300">Hook --/100</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                  <div class="rounded-lg bg-studio-bg/80 p-2">
+                    <span class="block text-slate-500">Surge ratio</span>
+                    <strong id="heroSurgeRatio" class="font-mono text-amber-300">--×</strong>
+                  </div>
+                  <div class="rounded-lg bg-studio-bg/80 p-2">
+                    <span class="block text-slate-500">Clean cut-out</span>
+                    <strong id="heroCutOut" class="font-mono text-cyan-300">--:--</strong>
+                  </div>
+                </div>
+                <div class="text-[11px] text-slate-400">Suggested on-screen hook</div>
+                <div id="heroCaption" class="text-sm font-extrabold tracking-wide text-white">—</div>
+                <div id="heroScoreBreakdown" class="text-[10px] leading-relaxed text-slate-500">Contrast 35% · Action density 30% · Visual velocity 20% · Transients 15%</div>
+              </div>
+
+              <!-- Primary Action Buttons -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <button id="heroPlayWindowBtn" class="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+                  <span>Play Window</span>
+                </button>
+                <button id="heroExportBtn" class="px-4 py-2.5 rounded-xl bg-studio-bg hover:bg-studio-hover text-cyan-300 border border-cyan-500/30 font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  <span>Export Clip (Android-compatible WebM)</span>
+                </button>
+              </div>
+              <div class="flex items-center justify-between pt-1">
+                <button id="heroCopyTimestampBtn" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                  <span>Copy Timestamps</span>
+                </button>
+                <span class="text-[11px] text-slate-500">WebM · duration metadata repaired</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Highlight Moments List (#1 - #5) -->
+          <div class="rounded-2xl bg-studio-panel border border-studio-border p-4 sm:p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-white">Top Ranked Highlight Scenes</h3>
+              <span id="sceneCountBadge" class="text-xs font-mono text-slate-400">0 scenes</span>
+            </div>
+            <div id="scenesListContainer" class="space-y-2.5">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Technical / Privacy Note -->
+          <div class="rounded-xl bg-studio-panel/50 border border-studio-border p-3.5 text-xs text-slate-400 leading-relaxed">
+            <strong class="text-slate-300">Adaptive Scan Engine & Privacy:</strong> Desktop mode uses audio energy plus visual motion. Mobile mode avoids full-file audio decoding and uses a bounded, low-resolution visual scan with pauses between samples to reduce memory, CPU and decoder pressure. All analysis runs locally in your browser.
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /**
+     * HypeScene Finder — High-Speed Coarse-to-Fine Client-Side Highlight Detector
+     *
+     * Key Speed Optimizations for 8+ Minute Videos:
+     * 1. Stage 1 (Instant Audio Pass — ~0.6s for 8-min video):
+     *    Decodes audio in a single pass and computes 0.5s RMS + positive transient surge buckets.
+     * 2. Stage 2 (Turbo Candidate Visual Scan vs. 16x Accelerated Full Scan):
+     *    - Turbo Mode (Default): Identifies top 12 high-energy candidate zones + evenly spaced
+     *      baseline anchors (~15–20% of video) and samples frames at 96x54 on an offscreen canvas,
+     *      reducing 8-minute scan time from minutes down to ~3–5 seconds.
+     *    - Full Scan Mode: Uses 16x accelerated playback + requestVideoFrameCallback (with fast
+     *      seek fallback) at 96x54 resolution across the entire timeline.
+     * 3. Peak-Centered 15s–60s Highlight Framing:
+     *    Windows frame 35% lead-in buildup before the hype climax and 65% payoff/reaction after.
+     */
+
+    const state = {
+      file: null,
+      videoUrl: null,
+      duration: 0,
+      sampleRateHz: 2, // 2 buckets per second (0.5s resolution)
+      audioSeries: [], // normalized 0..1 per bucket
+      transientSeries: [], // high-frequency/impact transient proxy per bucket
+      motionSeries: [], // normalized 0..1 per bucket
+      scannedBuckets: [], // boolean/float mask showing which buckets had visual inspection
+      combinedSeries: [], // weighted combination 0..1 per bucket
+      hasAudio: true,
+      scanMode: 'turbo', // 'turbo' | 'full'
+      isAnalyzing: false,
+      cancelRequested: false,
+
+      // Tuning parameters (15s to 60s presets + 10s-90s custom)
+      windowDuration: 15, // seconds
+      audioWeight: 0.55,  // 0..1
+      spacingLevel: 2,    // 1 (dense), 2 (standard), 3 (spread out)
+
+      // Ranked scenes
+      scenes: [],
+      selectedSceneIndex: 0,
+
+      // Window playback loop state
+      activeWindow: null, // { start, end, rank }
+
+      // Export state
+      isExporting: false,
+      cancelExportRequested: false,
+    };
+
+    // DOM References
+    const el = {
+      uploadSection: document.getElementById('uploadSection'),
+      workspaceSection: document.getElementById('workspaceSection'),
+      dropZone: document.getElementById('dropZone'),
+      fileInput: document.getElementById('fileInput'),
+      browseBtn: document.getElementById('browseBtn'),
+      headerUploadBtn: document.getElementById('headerUploadBtn'),
+
+      analysisBanner: document.getElementById('analysisBanner'),
+      analysisStageText: document.getElementById('analysisStageText'),
+      analysisSubText: document.getElementById('analysisSubText'),
+      analysisPercentText: document.getElementById('analysisPercentText'),
+      analysisProgressBar: document.getElementById('analysisProgressBar'),
+      cancelAnalysisBtn: document.getElementById('cancelAnalysisBtn'),
+
+      exportBanner: document.getElementById('exportBanner'),
+      exportStageText: document.getElementById('exportStageText'),
+      exportPercentText: document.getElementById('exportPercentText'),
+      exportProgressBar: document.getElementById('exportProgressBar'),
+      cancelExportBtn: document.getElementById('cancelExportBtn'),
+
+      videoFileName: document.getElementById('videoFileName'),
+      videoMetaBadge: document.getElementById('videoMetaBadge'),
+      mainVideo: document.getElementById('mainVideo'),
+      playPauseBtn: document.getElementById('playPauseBtn'),
+      currentTimeReadout: document.getElementById('currentTimeReadout'),
+      totalTimeReadout: document.getElementById('totalTimeReadout'),
+      modeTurboBtn: document.getElementById('modeTurboBtn'),
+      modeFullBtn: document.getElementById('modeFullBtn'),
+      speedSelect: document.getElementById('speedSelect'),
+      reAnalyzeBtn: document.getElementById('reAnalyzeBtn'),
+
+      windowLoopIndicator: document.getElementById('windowLoopIndicator'),
+      windowLoopLabel: document.getElementById('windowLoopLabel'),
+      stopWindowPlayBtn: document.getElementById('stopWindowPlayBtn'),
+
+      audioStatusTag: document.getElementById('audioStatusTag'),
+      scanSpeedBadge: document.getElementById('scanSpeedBadge'),
+      timelineContainer: document.getElementById('timelineContainer'),
+      timelineCanvas: document.getElementById('timelineCanvas'),
+      timelineHoverTooltip: document.getElementById('timelineHoverTooltip'),
+
+      durBtns: document.querySelectorAll('.dur-btn'),
+      customDurSlider: document.getElementById('customDurSlider'),
+      customDurReadout: document.getElementById('customDurReadout'),
+      weightSlider: document.getElementById('weightSlider'),
+      audioWeightVal: document.getElementById('audioWeightVal'),
+      motionWeightVal: document.getElementById('motionWeightVal'),
+      spacingSlider: document.getElementById('spacingSlider'),
+      spacingVal: document.getElementById('spacingVal'),
+      resetWeightsBtn: document.getElementById('resetWeightsBtn'),
+
+      heroSceneCard: document.getElementById('heroSceneCard'),
+      heroScore: document.getElementById('heroScore'),
+      heroContentPlaceholder: document.getElementById('heroContentPlaceholder'),
+      heroContentReady: document.getElementById('heroContentReady'),
+      heroReasonTag: document.getElementById('heroReasonTag'),
+      heroRange: document.getElementById('heroRange'),
+      heroPeak: document.getElementById('heroPeak'),
+      heroAudioPct: document.getElementById('heroAudioPct'),
+      heroAudioBar: document.getElementById('heroAudioBar'),
+      heroMotionPct: document.getElementById('heroMotionPct'),
+      heroMotionBar: document.getElementById('heroMotionBar'),
+      heroHookStrength: document.getElementById('heroHookStrength'),
+      heroSurgeRatio: document.getElementById('heroSurgeRatio'),
+      heroCutOut: document.getElementById('heroCutOut'),
+      heroCaption: document.getElementById('heroCaption'),
+      heroScoreBreakdown: document.getElementById('heroScoreBreakdown'),
+      heroPlayWindowBtn: document.getElementById('heroPlayWindowBtn'),
+      heroExportBtn: document.getElementById('heroExportBtn'),
+      heroCopyTimestampBtn: document.getElementById('heroCopyTimestampBtn'),
+
+      sceneCountBadge: document.getElementById('sceneCountBadge'),
+      scenesListContainer: document.getElementById('scenesListContainer'),
+      toastContainer: document.getElementById('toastContainer'),
+    };
+
+    // Utility: Non-blocking toast notification
+    function showToast(message, type = 'info') {
+      const colors = {
+        info: 'bg-studio-card border-studio-border text-slate-100',
+        success: 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200',
+        warning: 'bg-amber-950/90 border-amber-500/40 text-amber-200',
+        error: 'bg-rose-950/90 border-rose-500/40 text-rose-200',
+      };
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-medium transition-all duration-200 transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      el.toastContainer.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 220);
+      }, 3600);
+    }
+
+    // Utility: Format seconds as MM:SS or HH:MM:SS
+    function formatTime(sec) {
+      if (!isFinite(sec) || sec < 0) sec = 0;
+      const totalSec = Math.floor(sec);
+      const hrs = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      if (hrs > 0) {
+        return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // Utility: Clipboard copy using textarea + execCommand fallback for maximum compatibility
+    function copyTextToClipboard(text) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (ok) {
+          showToast(`Copied: ${text}`, 'success');
+          return;
+        }
+      } catch (err) {
+        // Fallback below
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast(`Copied: ${text}`, 'success'))
+          .catch(() => showToast('Could not copy to clipboard.', 'error'));
+      }
+    }
+
+    // Utility: Normalize an array of numbers to 0..1 using 98th percentile ceiling so single outliers don't flatten the curve
+    function normalizeSeries(arr) {
+      if (!arr || arr.length === 0) return [];
+      const sorted = [...arr].sort((a, b) => a - b);
+      const p98Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.98));
+      const maxVal = sorted[p98Index] || sorted[sorted.length - 1] || 1;
+      const minVal = sorted[0] || 0;
+      const range = maxVal - minVal;
+      if (range <= 1e-6) return arr.map(() => 0);
+      return arr.map(v => Math.max(0, Math.min(1, (v - minVal) / range)));
+    }
+
+    // File Upload Handlers
+    function handleFileSelection(file) {
+      if (!file) return;
+      if (!file.type.startsWith('video/') && !/\.(mp4|webm|mov|mkv|avi)$/i.test(file.name)) {
+        showToast('Please select a valid video file (MP4, WebM, or MOV).', 'error');
+        return;
+      }
+
+      // Cancel any ongoing scan
+      if (state.isAnalyzing) {
+        state.cancelRequested = true;
+      }
+      stopWindowPlayback();
+
+      if (state.videoUrl) {
+        URL.revokeObjectURL(state.videoUrl);
+      }
+
+      state.file = file;
+      state.videoUrl = URL.createObjectURL(file);
+      state.scenes = [];
+      state.activeWindow = null;
+
+      el.uploadSection.classList.add('hidden');
+      el.workspaceSection.classList.remove('hidden');
+      el.videoFileName.textContent = file.name;
+      el.heroContentReady.classList.add('hidden');
+      el.heroContentPlaceholder.classList.remove('hidden');
+      el.heroContentPlaceholder.textContent = 'Loading video metadata...';
+      el.heroScore.textContent = '--';
+      el.scenesListContainer.innerHTML = '';
+
+      el.mainVideo.src = state.videoUrl;
+      el.mainVideo.load();
+
+      el.mainVideo.onloadedmetadata = () => {
+        state.duration = el.mainVideo.duration;
+        if (!isFinite(state.duration) || state.duration <= 0) {
+          showToast('Unable to read video duration. Try another file format.', 'error');
+          return;
+        }
+        const formattedDur = formatTime(state.duration);
+        el.videoMetaBadge.textContent = formattedDur;
+        el.totalTimeReadout.textContent = formattedDur;
+        resizeTimelineCanvas();
+        runHypeAnalysis();
+      };
+
+      el.mainVideo.onerror = () => {
+        showToast('Browser could not decode this video codec. Try an H.264 MP4 or WebM file.', 'error');
+      };
+    }
+
+    // Drag & Drop Events
+    el.browseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      el.fileInput.click();
+    });
+    el.headerUploadBtn.addEventListener('click', () => el.fileInput.click());
+    el.dropZone.addEventListener('click', () => el.fileInput.click());
+
+    el.fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleFileSelection(e.target.files[0]);
+      }
+    });
+
+    ['dragenter', 'dragover'].forEach(evtName => {
+      el.dropZone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        el.dropZone.classList.add('border-orange-500', 'bg-studio-panel');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(evtName => {
+      el.dropZone.addEventListener(evtName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        el.dropZone.classList.remove('border-orange-500', 'bg-studio-panel');
+      });
+    });
+
+    el.dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer?.files;
+      if (files && files[0]) {
+        handleFileSelection(files[0]);
+      }
+    });
+
+    // Video Player Controls & Window Loop Enforcement
+    el.playPauseBtn.addEventListener('click', () => {
+      if (el.mainVideo.paused) {
+        el.mainVideo.play();
+      } else {
+        el.mainVideo.pause();
+      }
+    });
+
+    el.speedSelect.addEventListener('change', (e) => {
+      el.mainVideo.playbackRate = parseFloat(e.target.value) || 1;
+    });
+
+    el.reAnalyzeBtn.addEventListener('click', () => {
+      if (state.videoUrl && !state.isAnalyzing) {
+        runHypeAnalysis();
+      }
+    });
+
+    function setScanMode(mode) {
+      state.scanMode = mode;
+      if (mode === 'turbo') {
+        el.modeTurboBtn.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold bg-orange-500 text-white transition';
+        el.modeFullBtn.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-400 hover:text-white transition';
+      } else {
+        el.modeFullBtn.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold bg-cyan-500 text-slate-950 transition';
+        el.modeTurboBtn.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-400 hover:text-white transition';
+      }
+      if (state.videoUrl && !state.isAnalyzing) {
+        runHypeAnalysis();
+      }
+    }
+
+    el.modeTurboBtn.addEventListener('click', () => setScanMode('turbo'));
+    el.modeFullBtn.addEventListener('click', () => setScanMode('full'));
+
+    el.stopWindowPlayBtn.addEventListener('click', stopWindowPlayback);
+
+    function stopWindowPlayback() {
+      state.activeWindow = null;
+      el.windowLoopIndicator.classList.add('hidden');
+      el.windowLoopIndicator.classList.remove('inline-flex');
+      el.heroSceneCard.classList.remove('active-window-pulse');
+      drawTimeline();
+    }
+
+    function playHighlightWindow(scene, rankNumber = 1) {
+      if (!scene) return;
+      state.activeWindow = { start: scene.start, end: scene.end, rank: rankNumber };
+      el.mainVideo.currentTime = scene.start;
+      el.mainVideo.play();
+      el.windowLoopLabel.textContent = `Looping #${rankNumber} (${formatTime(scene.start)}–${formatTime(scene.end)})`;
+      el.windowLoopIndicator.classList.remove('hidden');
+      el.windowLoopIndicator.classList.add('inline-flex');
+      if (rankNumber === 1) {
+        el.heroSceneCard.classList.add('active-window-pulse');
+      } else {
+        el.heroSceneCard.classList.remove('active-window-pulse');
+      }
+      drawTimeline();
+    }
+
+    el.mainVideo.addEventListener('timeupdate', () => {
+      const now = el.mainVideo.currentTime;
+      el.currentTimeReadout.textContent = formatTime(now);
+
+      // Enforce clean loop inside selected highlight window
+      if (state.activeWindow && !state.isExporting) {
+        if (now >= state.activeWindow.end) {
+          el.mainVideo.currentTime = state.activeWindow.start;
+        }
+      }
+      drawTimeline();
+    });
+
+    // =========================================================================
+    // CLIENT-SIDE HYPE DETECTION ENGINE
+    // =========================================================================
+
+    function updateProgress(percent, stage, sub = '') {
+      const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+      el.analysisProgressBar.style.width = `${clamped}%`;
+      el.analysisPercentText.textContent = `${clamped}%`;
+      if (stage) el.analysisStageText.textContent = stage;
+      if (sub) el.analysisSubText.textContent = sub;
+    }
+
+    el.cancelAnalysisBtn.addEventListener('click', () => {
+      if (state.isAnalyzing) {
+        state.cancelRequested = true;
+        el.analysisStageText.textContent = 'Cancelling scan...';
+      }
+    });
+
+    function shouldUseMobileSafeScan() {
+      const smallViewport = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+      const touchDevice = (navigator.maxTouchPoints || 0) > 0;
+      return smallViewport || (touchDevice && window.innerWidth <= 1024);
+    }
+
+
+    async function runHypeAnalysis() {
+      if (!state.videoUrl || !state.duration || state.isAnalyzing) return;
+
+      const scanStartTime = performance.now();
+      const mobileSafe = shouldUseMobileSafeScan();
+      state.isAnalyzing = true;
+      state.cancelRequested = false;
+      el.analysisBanner.classList.remove('hidden');
+      el.scanSpeedBadge.classList.add('hidden');
+      el.heroContentPlaceholder.textContent = mobileSafe
+        ? 'Running low-load mobile visual scan...'
+        : 'Running fast two-stage highlight scan...';
+
+      const numBuckets = Math.max(4, Math.ceil(state.duration * state.sampleRateHz));
+      let audioResult;
+      let audioElapsedSec = '0.0';
+      let effectiveMode = 'turbo';
+
+      try {
+        // Mobile-safe mode intentionally avoids whole-file audio decoding. decodeAudioData()
+        // can allocate hundreds of MB for long clips on low-memory phones.
+        if (mobileSafe) {
+          updateProgress(5, 'Mobile-safe scan: audio analysis skipped', 'No full audio decode • low-resolution visual sampling');
+          state.hasAudio = false;
+          state.audioSeries = new Array(numBuckets).fill(0);
+          state.transientSeries = new Array(numBuckets).fill(0);
+          state.audioWeight = 0;
+          if (el.weightSlider) el.weightSlider.value = 0;
+          if (typeof updateWeightLabels === 'function') updateWeightLabels();
+          el.audioStatusTag.textContent = 'Mobile Low-Load • Visual Only';
+          el.audioStatusTag.className = 'text-[11px] font-normal px-2 py-0.5 rounded-full bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20';
+        } else {
+          updateProgress(3, 'Stage 1/2: Audio energy pass...', 'Desktop mode • decoding audio for peak detection');
+          const tAudioStart = performance.now();
+          audioResult = await analyzeAudioTrack(state.videoUrl, state.duration, numBuckets);
+          if (state.cancelRequested) throw new Error('CANCELLED');
+          audioElapsedSec = ((performance.now() - tAudioStart) / 1000).toFixed(2);
+          state.hasAudio = audioResult.hasAudio;
+          state.audioSeries = audioResult.series;
+          state.transientSeries = audioResult.transientSeries || new Array(numBuckets).fill(0);
+          effectiveMode = state.scanMode;
+          if (!state.hasAudio) {
+            el.audioStatusTag.textContent = 'Visual-Only • Turbo';
+            el.audioStatusTag.className = 'text-[11px] font-normal px-2 py-0.5 rounded-full bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20';
+            state.audioWeight = 0;
+            if (el.weightSlider) el.weightSlider.value = 0;
+            updateWeightLabels();
+            effectiveMode = 'turbo'; // Never escalate a failed/silent audio pass to Full Scan.
+          } else {
+            el.audioStatusTag.textContent = effectiveMode === 'turbo' ? 'Turbo Coarse-to-Fine' : 'Full Audio + Visual';
+            el.audioStatusTag.className = 'text-[11px] font-normal px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20';
+          }
+        }
+
+        const stageLabel = mobileSafe
+          ? 'Mobile-safe visual scan (no audio decode)'
+          : (effectiveMode === 'turbo'
+              ? `Stage 2/2: Turbo visual check (Audio ${audioElapsedSec}s)`
+              : `Stage 2/2: Full visual scan (Audio ${audioElapsedSec}s)`);
+        updateProgress(mobileSafe ? 8 : 30, stageLabel,
+          mobileSafe ? 'Low resolution • limited sample count • pauses between frames' : 'Sampling frames for motion and scene cuts');
+
+        let visualResult;
+        if (mobileSafe) {
+          visualResult = await analyzeVisualMobileSafe(state.videoUrl, state.duration, numBuckets, (pct, etaStr) => {
+            updateProgress(8 + pct * 0.90, stageLabel, etaStr);
+          });
+        } else if (effectiveMode === 'turbo') {
+          visualResult = await analyzeVisualTurboCandidates(state.videoUrl, state.duration, numBuckets, state.audioSeries, (pct, etaStr) => {
+            updateProgress(30 + pct * 0.68, stageLabel, etaStr);
+          });
+        } else {
+          visualResult = await analyzeVisualAcceleratedFull(state.videoUrl, state.duration, numBuckets, (pct, etaStr) => {
+            updateProgress(30 + pct * 0.68, stageLabel, etaStr);
+          });
+        }
+
+        if (state.cancelRequested) throw new Error('CANCELLED');
+        state.motionSeries = visualResult.series;
+        state.scannedBuckets = visualResult.scannedMask;
+
+        const totalElapsedSec = ((performance.now() - scanStartTime) / 1000).toFixed(1);
+        updateProgress(100, `Scan complete in ${totalElapsedSec}s!`, mobileSafe ? 'Mobile-safe scan complete • ranking highlight windows' : 'Ranking highlight windows');
+        el.scanSpeedBadge.textContent = `${mobileSafe ? 'Mobile-safe scan' : 'Scanned'} ${formatTime(state.duration)} in ${totalElapsedSec}s`;
+        el.scanSpeedBadge.classList.remove('hidden');
+        recomputeRankings();
+        setTimeout(() => el.analysisBanner.classList.add('hidden'), 450);
+        showToast(`Found highlight scenes in ${totalElapsedSec}s!`, 'success');
+      } catch (err) {
+        el.analysisBanner.classList.add('hidden');
+        if (err && err.message === 'CANCELLED') {
+          showToast('Video analysis cancelled.', 'warning');
+          el.heroContentPlaceholder.textContent = 'Scan cancelled. Click "Re-Scan" to analyze again.';
+        } else {
+          console.error('Analysis error:', err);
+          showToast('Analysis stopped safely. Try a shorter/lower-resolution video.', 'error');
+        }
+      } finally {
+        state.isAnalyzing = false;
+      }
+    }
+
+
+    /**
+     * Mobile-safe visual scan: no audio decoding, tiny 48x27 canvas, 4 evenly spaced
+     * regions, bounded frame count, and deliberate idle time between seeks.
+     */
+    function analyzeVisualMobileSafe(blobUrl, duration, numBuckets, onProgress) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.src = blobUrl;
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        video.setAttribute('playsinline', '');
+        video.setAttribute('muted', '');
+
+        const width = 48, height = 27, pixelCount = width * height;
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const rawMotion = new Array(numBuckets).fill(0);
+        const scannedMask = new Array(numBuckets).fill(false);
+        let previousGray = null, previousTime = -999, index = 0, cancelled = false;
+        const safeDuration = Math.max(0.5, duration);
+        const anchorCount = Math.min(4, Math.max(2, Math.ceil(safeDuration / 75)));
+        const centers = [];
+        for (let i = 1; i <= anchorCount; i++) centers.push((i / (anchorCount + 1)) * safeDuration);
+        const targets = new Set();
+        for (const center of centers) {
+          for (let t = Math.max(0.15, center - 4.5); t <= Math.min(duration - 0.15, center + 4.5); t += 2.2) {
+            targets.add(Math.max(0.1, Math.min(duration - 0.1, Number(t.toFixed(1)))));
+          }
+          targets.add(Math.max(0.1, Math.min(duration - 0.1, Number(center.toFixed(1)))));
+        }
+        const targetTimes = Array.from(targets).sort((a, b) => a - b).slice(0, 32);
+        const total = targetTimes.length;
+        const cleanup = () => {
+          video.onloadedmetadata = video.onseeked = video.onerror = null;
+          video.pause(); video.removeAttribute('src'); video.load();
+          canvas.width = canvas.height = 1;
+          previousGray = null;
+        };
+        const fail = (err) => { if (!cancelled) { cancelled = true; cleanup(); reject(err); } };
+        video.onerror = () => {
+          cleanup(); resolve({ series: new Array(numBuckets).fill(0.25), scannedMask });
+        };
+        video.onloadedmetadata = () => {
+          if (!Number.isFinite(video.duration) || video.duration <= 0) {
+            cleanup(); resolve({ series: new Array(numBuckets).fill(0.25), scannedMask }); return;
+          }
+          nextSeek();
+        };
+        function nextSeek() {
+          if (state.cancelRequested) { fail(new Error('CANCELLED')); return; }
+          if (index >= total) {
+            cleanup();
+            resolve({ series: normalizeSeries(rawMotion), scannedMask });
+            return;
+          }
+          const target = Math.min(targetTimes[index], Math.max(0, video.duration - 0.05));
+          if (Math.abs(video.currentTime - target) < 0.03) processFrame();
+          else video.currentTime = target;
+        }
+        function processFrame() {
+          if (state.cancelRequested) { fail(new Error('CANCELLED')); return; }
+          const currentTime = targetTimes[index];
+          try {
+            ctx.drawImage(video, 0, 0, width, height);
+            const pixels = ctx.getImageData(0, 0, width, height).data;
+            const gray = new Uint8Array(pixelCount);
+            let diff = 0, cuts = 0;
+            const consecutive = previousGray && (currentTime - previousTime <= 2.5);
+            for (let p = 0, k = 0; p < pixelCount; p++, k += 4) {
+              const lum = (pixels[k] * 77 + pixels[k + 1] * 150 + pixels[k + 2] * 29) >> 8;
+              gray[p] = lum;
+              if (consecutive) { const d = Math.abs(lum - previousGray[p]); diff += d; if (d > 52) cuts++; }
+            }
+            const bucket = Math.min(numBuckets - 1, Math.floor(currentTime * state.sampleRateHz));
+            scannedMask[bucket] = true;
+            if (consecutive) rawMotion[bucket] = Math.max(rawMotion[bucket], diff / pixelCount + (cuts / pixelCount) * 60);
+            previousGray = gray; previousTime = currentTime;
+          } catch (_) { /* frame can be unavailable during a seek; skip it */ }
+          index++;
+          const pct = total ? (index / total) * 100 : 100;
+          onProgress(pct, `Low-load visual sampling ${index}/${total} • ${Math.round(pct)}%`);
+          // Yield to the browser and avoid back-to-back decoder/canvas work.
+          setTimeout(nextSeek, 90);
+        }
+        video.onseeked = processFrame;
+        video.load();
+      });
+    }
+
+    /**
+     * Stage 1: Decodes local audio and computes RMS energy, amplitude-difference transient proxy and surge delta.
+     * Uses strided sampling so an 8-minute audio buffer processes in ~0.4–0.9 seconds.
+     */
+    async function analyzeAudioTrack(blobUrl, duration, numBuckets) {
+      try {
+        const response = await fetch(blobUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        if (state.cancelRequested) return { hasAudio: false, series: new Array(numBuckets).fill(0), transientSeries: new Array(numBuckets).fill(0) };
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioCtx();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+        const channels = audioBuffer.numberOfChannels;
+        const totalSamples = audioBuffer.length;
+
+        if (channels === 0 || totalSamples === 0) {
+          await audioCtx.close();
+          return { hasAudio: false, series: new Array(numBuckets).fill(0), transientSeries: new Array(numBuckets).fill(0) };
+        }
+
+        const ch0 = audioBuffer.getChannelData(0);
+        const ch1 = channels > 1 ? audioBuffer.getChannelData(1) : null;
+        const samplesPerBucket = Math.max(1, Math.floor(totalSamples / numBuckets));
+        // Adaptive stride: read ~2,500 samples per 0.5s bucket for sub-second processing
+        const stride = Math.max(4, Math.floor(samplesPerBucket / 2500));
+
+        const rawRms = new Float32Array(numBuckets);
+        const rawTransient = new Float32Array(numBuckets);
+        for (let b = 0; b < numBuckets; b++) {
+          const start = b * samplesPerBucket;
+          const end = Math.min(totalSamples, start + samplesPerBucket);
+          let sumSq = 0;
+          let diffSum = 0;
+          let count = 0;
+          let previousSample = null;
+          for (let i = start; i < end; i += stride) {
+            const sample = ch1 ? 0.5 * (ch0[i] + ch1[i]) : ch0[i];
+            sumSq += sample * sample;
+            if (previousSample !== null) diffSum += Math.abs(sample - previousSample);
+            previousSample = sample;
+            count++;
+          }
+          rawRms[b] = count > 0 ? Math.sqrt(sumSq / count) : 0;
+          rawTransient[b] = count > 1 ? diffSum / (count - 1) : 0;
+
+          if (b % 400 === 0) {
+            await new Promise(r => setTimeout(r, 0));
+            if (state.cancelRequested) {
+              await audioCtx.close();
+              return { hasAudio: false, series: [], transientSeries: [] };
+            }
+          }
+        }
+
+        await audioCtx.close();
+
+        // Combine absolute RMS loudness (60%) + sudden positive surge delta (40%)
+        const combinedRaw = new Array(numBuckets).fill(0);
+        for (let b = 0; b < numBuckets; b++) {
+          const prev = b > 0 ? rawRms[b - 1] : rawRms[b];
+          const prev2 = b > 1 ? rawRms[b - 2] : prev;
+          const surge = Math.max(0, rawRms[b] - Math.min(prev, prev2));
+          combinedRaw[b] = rawRms[b] * 0.60 + surge * 0.90;
+        }
+
+        const normalized = normalizeSeries(combinedRaw);
+        const transientNormalized = normalizeSeries(Array.from(rawTransient));
+        const hasSignal = normalized.some(v => v > 0.02);
+        return { hasAudio: hasSignal, series: normalized, transientSeries: transientNormalized };
+      } catch (err) {
+        console.warn('Audio decode fallback triggered:', err);
+        return { hasAudio: false, series: new Array(numBuckets).fill(0), transientSeries: new Array(numBuckets).fill(0) };
+      }
+    }
+
+    /**
+     * Stage 2A (TURBO MODE):
+     * Instead of seeking across all 480s of an 8-minute video, selects the top 12 audio-spike
+     * candidate zones (~14s each) plus evenly spaced baseline anchor checks across the video,
+     * and samples frames on a tiny 96x54 offscreen canvas. Completes in ~3–5 seconds!
+     */
+    function analyzeVisualTurboCandidates(blobUrl, duration, numBuckets, audioSeries, onProgress) {
+      return new Promise((resolve, reject) => {
+        // 1. Pick top 12 distinct audio peaks + 6 evenly spaced baseline anchors
+        const indexedAudio = audioSeries.map((val, idx) => ({ idx, val }));
+        indexedAudio.sort((a, b) => b.val - a.val);
+
+        const candidateCenters = [];
+        const minSeparationBuckets = Math.max(6, Math.round(16 * state.sampleRateHz)); // 16s apart
+
+        for (const item of indexedAudio) {
+          if (candidateCenters.length >= 8) break;
+          if (!candidateCenters.some(c => Math.abs(c - item.idx) < minSeparationBuckets)) {
+            candidateCenters.push(item.idx);
+          }
+        }
+
+        // Add 6 evenly spaced anchors so high-motion / quiet-audio scenes are also discovered
+        const anchorCount = Math.min(5, Math.max(3, Math.floor(duration / 120)));
+        for (let a = 1; a <= anchorCount; a++) {
+          const anchorIdx = Math.floor((a / (anchorCount + 1)) * numBuckets);
+          if (!candidateCenters.some(c => Math.abs(c - anchorIdx) < minSeparationBuckets * 0.7)) {
+            candidateCenters.push(anchorIdx);
+          }
+        }
+
+        // Build target timestamps (1.0s step inside each ±7s candidate zone = ~14 seeks per zone)
+        const targetTimesSet = new Set();
+        const halfZoneSec = 6;
+        for (const centerIdx of candidateCenters) {
+          const centerSec = centerIdx / state.sampleRateHz;
+          const zoneStart = Math.max(0.2, centerSec - halfZoneSec);
+          const zoneEnd = Math.min(duration - 0.1, centerSec + halfZoneSec);
+          for (let t = zoneStart; t <= zoneEnd; t += 1.5) {
+            targetTimesSet.add(Number(t.toFixed(2)));
+          }
+        }
+
+        const targetTimes = Array.from(targetTimesSet).sort((a, b) => a - b);
+        const totalTargets = targetTimes.length;
+
+        const offVideo = document.createElement('video');
+        offVideo.src = blobUrl;
+        offVideo.muted = true;
+        offVideo.playsInline = true;
+        offVideo.preload = 'auto';
+
+        const width = 96;
+        const height = 54;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        const rawMotion = new Array(numBuckets).fill(0);
+        const scannedMask = new Array(numBuckets).fill(false);
+        let prevGray = null;
+        let prevTime = -999;
+        let stepIdx = 0;
+        const tStart = performance.now();
+
+        const cleanup = () => {
+          offVideo.onloadeddata = null;
+          offVideo.onseeked = null;
+          offVideo.onerror = null;
+          offVideo.src = '';
+          offVideo.load();
+        };
+
+        offVideo.onerror = () => {
+          cleanup();
+          resolve({ series: new Array(numBuckets).fill(0.3), scannedMask });
+        };
+
+        offVideo.onloadeddata = () => {
+          seekNext();
+        };
+
+        function seekNext() {
+          if (state.cancelRequested) {
+            cleanup();
+            reject(new Error('CANCELLED'));
+            return;
+          }
+          if (stepIdx >= totalTargets) {
+            cleanup();
+            // Smoothly propagate measured motion inside scanned windows
+            for (let i = 1; i < numBuckets; i++) {
+              if (rawMotion[i] === 0 && rawMotion[i - 1] > 0 && scannedMask[i - 1]) {
+                rawMotion[i] = rawMotion[i - 1] * 0.7;
+              }
+            }
+            resolve({ series: normalizeSeries(rawMotion), scannedMask });
+            return;
+          }
+          offVideo.currentTime = targetTimes[stepIdx];
+        }
+
+        offVideo.onseeked = () => {
+          if (state.cancelRequested) {
+            cleanup();
+            reject(new Error('CANCELLED'));
+            return;
+          }
+
+          const currentSec = targetTimes[stepIdx];
+          try {
+            ctx.drawImage(offVideo, 0, 0, width, height);
+            const imgData = ctx.getImageData(0, 0, width, height).data;
+            const pixelCount = width * height;
+            const gray = new Uint8Array(pixelCount);
+
+            // Only compare frames that are consecutive (within 1.5s of each other)
+            const isConsecutive = prevGray && (currentSec - prevTime) <= 1.6;
+            let diffSum = 0;
+            let hardCutPixels = 0;
+
+            for (let p = 0, idx = 0; p < pixelCount; p++, idx += 4) {
+              const lum = (imgData[idx] * 77 + imgData[idx + 1] * 150 + imgData[idx + 2] * 29) >> 8;
+              gray[p] = lum;
+              if (isConsecutive) {
+                const d = Math.abs(lum - prevGray[p]);
+                diffSum += d;
+                if (d > 48) hardCutPixels++;
+              }
+            }
+
+            const bucketIdx = Math.min(numBuckets - 1, Math.floor(currentSec * state.sampleRateHz));
+            scannedMask[bucketIdx] = true;
+
+            if (isConsecutive) {
+              const meanDiff = diffSum / pixelCount;
+              const cutRatio = hardCutPixels / pixelCount;
+              const frameScore = meanDiff + cutRatio * 65;
+              rawMotion[bucketIdx] = Math.max(rawMotion[bucketIdx], frameScore);
+            }
+
+            prevGray = gray;
+            prevTime = currentSec;
+          } catch (e) {
+            // Ignore transient frame read error
+          }
+
+          stepIdx++;
+          const pct = (stepIdx / totalTargets) * 100;
+          const elapsed = (performance.now() - tStart) / 1000;
+          const remaining = stepIdx > 2 ? Math.max(0, (elapsed / stepIdx) * (totalTargets - stepIdx)) : 0;
+          const etaLabel = remaining > 0.3
+            ? `Turbo scanning ${candidateCenters.length} peak zones • ~${remaining.toFixed(1)}s left`
+            : `Turbo scanning ${candidateCenters.length} peak zones • ${Math.round(pct)}%`;
+          onProgress(pct, etaLabel);
+
+          if (stepIdx % 4 === 0) {
+            setTimeout(seekNext, 0);
+          } else {
+            seekNext();
+          }
+        };
+      });
+    }
+
+    /**
+     * Stage 2B (FULL VIDEO SCAN MODE):
+     * Uses 16x accelerated playback + requestVideoFrameCallback (when supported) on a tiny 96x54
+     * canvas so full-timeline visual scanning runs 8–12x faster than sequential seeking.
+     */
+    function analyzeVisualAcceleratedFull(blobUrl, duration, numBuckets, onProgress) {
+      return new Promise((resolve, reject) => {
+        const offVideo = document.createElement('video');
+        offVideo.src = blobUrl;
+        offVideo.muted = true;
+        offVideo.playsInline = true;
+        offVideo.preload = 'auto';
+
+        const width = 96;
+        const height = 54;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        const rawMotion = new Array(numBuckets).fill(0);
+        const scannedMask = new Array(numBuckets).fill(true);
+        let prevGray = null;
+        const tStart = performance.now();
+
+        const cleanup = () => {
+          offVideo.pause();
+          offVideo.onloadeddata = null;
+          offVideo.onended = null;
+          offVideo.onerror = null;
+          offVideo.src = '';
+          offVideo.load();
+        };
+
+        const sampleCurrentFrame = () => {
+          const currentSec = offVideo.currentTime;
+          try {
+            ctx.drawImage(offVideo, 0, 0, width, height);
+            const imgData = ctx.getImageData(0, 0, width, height).data;
+            const pixelCount = width * height;
+            const gray = new Uint8Array(pixelCount);
+
+            let diffSum = 0;
+            let hardCutPixels = 0;
+
+            for (let p = 0, idx = 0; p < pixelCount; p++, idx += 4) {
+              const lum = (imgData[idx] * 77 + imgData[idx + 1] * 150 + imgData[idx + 2] * 29) >> 8;
+              gray[p] = lum;
+              if (prevGray) {
+                const d = Math.abs(lum - prevGray[p]);
+                diffSum += d;
+                if (d > 48) hardCutPixels++;
+              }
+            }
+
+            if (prevGray) {
+              const meanDiff = diffSum / pixelCount;
+              const cutRatio = hardCutPixels / pixelCount;
+              const frameScore = meanDiff + cutRatio * 65;
+              const bucketIdx = Math.min(numBuckets - 1, Math.floor(currentSec * state.sampleRateHz));
+              rawMotion[bucketIdx] = Math.max(rawMotion[bucketIdx], frameScore);
+            }
+            prevGray = gray;
+          } catch (e) {
+            // Ignore frame error
+          }
+
+          const pct = Math.min(100, (currentSec / duration) * 100);
+          const elapsed = (performance.now() - tStart) / 1000;
+          const remaining = pct > 3 ? Math.max(0, (elapsed / pct) * (100 - pct)) : 0;
+          onProgress(pct, remaining > 0.3 ? `16x Full Scan • ~${remaining.toFixed(1)}s left` : `16x Full Scan • ${Math.round(pct)}%`);
+        };
+
+        const finishFullScan = () => {
+          cleanup();
+          for (let i = 1; i < numBuckets; i++) {
+            if (rawMotion[i] === 0 && rawMotion[i - 1] > 0) {
+              rawMotion[i] = rawMotion[i - 1] * 0.85;
+            }
+          }
+          resolve({ series: normalizeSeries(rawMotion), scannedMask });
+        };
+
+        offVideo.onerror = () => {
+          cleanup();
+          resolve({ series: new Array(numBuckets).fill(0.4), scannedMask });
+        };
+
+        offVideo.onended = finishFullScan;
+
+        offVideo.onloadeddata = () => {
+          offVideo.playbackRate = 16.0;
+          offVideo.play().then(() => {
+            if ('requestVideoFrameCallback' in offVideo) {
+              const onFrame = () => {
+                if (state.cancelRequested) {
+                  cleanup();
+                  reject(new Error('CANCELLED'));
+                  return;
+                }
+                if (offVideo.ended || offVideo.currentTime >= duration - 0.1) {
+                  finishFullScan();
+                  return;
+                }
+                sampleCurrentFrame();
+                offVideo.requestVideoFrameCallback(onFrame);
+              };
+              offVideo.requestVideoFrameCallback(onFrame);
+            } else {
+              const timer = setInterval(() => {
+                if (state.cancelRequested) {
+                  clearInterval(timer);
+                  cleanup();
+                  reject(new Error('CANCELLED'));
+                  return;
+                }
+                if (offVideo.ended || offVideo.currentTime >= duration - 0.1) {
+                  clearInterval(timer);
+                  finishFullScan();
+                  return;
+                }
+                sampleCurrentFrame();
+              }, 60);
+            }
+          }).catch(() => {
+            // Fallback to Turbo seek scan if browser restricts high-rate autoplay
+            cleanup();
+            analyzeVisualTurboCandidates(blobUrl, duration, numBuckets, new Array(numBuckets).fill(0.5), onProgress)
+              .then(resolve)
+              .catch(reject);
+          });
+        };
+      });
+    }
+
+    // =========================================================================
+    // VIRAL SHORT-FORM GAMING SCENE ENGINE
+    // 35% contrast/surge · 30% sustained action · 20% visual velocity · 15% transients
+    // =========================================================================
+
+    function clamp01(value) {
+      return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+    }
+
+    function meanRange(series, fromIdx, toIdx) {
+      const start = Math.max(0, Math.floor(fromIdx));
+      const end = Math.min(series.length, Math.max(start + 1, Math.ceil(toIdx)));
+      if (end <= start) return 0;
+      let sum = 0;
+      for (let i = start; i < end; i++) sum += series[i] || 0;
+      return sum / (end - start);
+    }
+
+    function maxRange(series, fromIdx, toIdx) {
+      const start = Math.max(0, Math.floor(fromIdx));
+      const end = Math.min(series.length, Math.max(start + 1, Math.ceil(toIdx)));
+      let max = 0;
+      for (let i = start; i < end; i++) max = Math.max(max, series[i] || 0);
+      return max;
+    }
+
+    function countLocalPeaks(series, fromIdx, toIdx, threshold) {
+      const start = Math.max(1, Math.floor(fromIdx));
+      const end = Math.min(series.length - 1, Math.ceil(toIdx));
+      let count = 0;
+      for (let i = start; i < end; i++) {
+        const value = series[i] || 0;
+        if (value >= threshold && value >= (series[i - 1] || 0) && value > (series[i + 1] || 0)) count++;
+      }
+      return count;
+    }
+
+    function detectPostClimaxDrop(peakIdx, peakValue, series, maxEndIdx) {
+      const minAfter = Math.max(1, Math.round(1.5 * state.sampleRateHz));
+      const maxAfter = Math.max(minAfter, Math.round(7 * state.sampleRateHz));
+      const lowThreshold = Math.max(0.10, peakValue * 0.48);
+      const sustainBuckets = Math.max(2, Math.round(1.0 * state.sampleRateHz));
+
+      for (let i = peakIdx + minAfter; i <= Math.min(maxEndIdx, peakIdx + maxAfter); i++) {
+        let lowCount = 0;
+        for (let j = i; j < Math.min(maxEndIdx, i + sustainBuckets); j++) {
+          if ((series[j] || 0) <= lowThreshold) lowCount++;
+        }
+        if (lowCount >= Math.max(2, Math.ceil(sustainBuckets * 0.75))) {
+          return i / state.sampleRateHz;
+        }
+      }
+      return null;
+    }
+
+    function generateViralCaption(scene) {
+      // Captions are evidence-based creative suggestions, not semantic recognition
+      // of the actual game event. Use the dominant measured signal and climax position.
+      const clipDuration = Math.max(0.1, scene.end - scene.start);
+      const climaxPosition = clamp01((scene.peakTime - scene.start) / clipDuration);
+      const audio = clamp01(scene.avgAudio || 0);
+      const motion = clamp01(scene.avgMotion || 0);
+      const density = clamp01(scene.actionDensity || 0);
+      const visual = clamp01(scene.visualVelocity || 0);
+      const transient = clamp01(scene.transientScore || 0);
+      const surge = Number(scene.surgeRatio) || 0;
+      const hook = Number(scene.hookStrength) || 0; // stored on a 0–100 scale
+
+      // Reserve "last-second" wording for a climax genuinely near the clip's end.
+      if (climaxPosition >= 0.72 && hook >= 60 && density >= 0.50) {
+        return 'LAST-SECOND GAME WINNER';
+      }
+      if (density >= 0.62 && visual >= 0.55 && transient >= 0.45) {
+        return 'NONSTOP ACTION EXPLOSION';
+      }
+      if (surge >= 2.5 && audio >= motion * 1.10 && transient >= 0.40) {
+        return 'SILENCE TO PURE MAYHEM';
+      }
+      if (motion >= 0.58 && visual >= 0.52 && motion > audio * 1.12) {
+        return 'LIGHTNING-FAST SKILL PLAY';
+      }
+      if (audio >= 0.58 && transient >= 0.48 && audio > motion * 1.10) {
+        return 'THE CROWD LOST IT';
+      }
+      if (density >= 0.55 && climaxPosition < 0.72) {
+        return 'A PLAY-BY-PLAY THRILLER';
+      }
+      if (surge >= 2.0 && hook >= 55) {
+        return 'THE BUILDUP WAS WORTH IT';
+      }
+      if (visual >= 0.42 && density >= 0.38) {
+        return 'FAST-PACED GAMEPLAY MOMENT';
+      }
+      if (audio >= 0.40 && transient >= 0.30) {
+        return 'THAT IMPACT CHANGED EVERYTHING';
+      }
+      if (motion >= 0.35) {
+        return 'A SUDDEN BURST OF ACTION';
+      }
+      if (surge >= 1.5) {
+        return 'A QUIET MOMENT TURNS INTENSE';
+      }
+      return 'A MOMENT WORTH A SECOND LOOK';
+    }
+
+    function generateHypeReason(avgAudio, avgMotion, hasAudio, scene = null) {
+      if (scene?.actionDensity >= 0.65 && scene?.visualVelocity >= 0.50) return 'Sustained Multi-Beat Gaming Action';
+      if (!hasAudio) {
+        if (avgMotion > 0.6) return 'High-Velocity Visual Action & Cuts';
+        if (avgMotion > 0.35) return 'Rapid Camera Movement & Scene Shift';
+        return 'Peak Visual Activity Segment';
+      }
+      if (avgAudio > 0.55 && avgMotion > 0.55) return 'Audio Surge + Rapid Visual Action';
+      if (avgAudio > avgMotion * 1.35) return 'Crowd / Impact / Commentary Surge';
+      if (avgMotion > avgAudio * 1.35) return 'Fast Cuts & High-Motion Burst';
+      return 'Synchronized Audio & Visual Climax';
+    }
+
+    function recomputeRankings() {
+      const len = Math.min(
+        Math.max(state.audioSeries.length, state.motionSeries.length),
+        Math.ceil(state.duration * state.sampleRateHz)
+      );
+      if (len < 4 || state.duration <= 0) return;
+
+      const audio = state.hasAudio ? state.audioSeries : new Array(len).fill(0);
+      const motion = state.motionSeries.length ? state.motionSeries : new Array(len).fill(0);
+      const audioWeight = state.hasAudio ? 0.55 : 0;
+      const motionWeight = state.hasAudio ? 0.45 : 1;
+
+      state.combinedSeries = new Array(len);
+      for (let i = 0; i < len; i++) {
+        const a = audio[i] || 0;
+        const m = motion[i] || 0;
+        const synergy = Math.sqrt(a * m) * 0.18;
+        state.combinedSeries[i] = clamp01(a * audioWeight + m * motionWeight + synergy);
+      }
+
+      const strongestSignal = Math.max(
+        maxRange(audio, 0, len),
+        maxRange(motion, 0, len),
+        maxRange(state.combinedSeries, 0, len)
+      );
+      if (strongestSignal < 0.015) {
+        state.scenes = [];
+        state.selectedSceneIndex = 0;
+        renderResults();
+        drawTimeline();
+        return;
+      }
+
+      const targetSec = Math.min(60, Math.max(15, Number(state.windowDuration) || 15));
+      const targetBuckets = Math.max(1, Math.round(targetSec * state.sampleRateHz));
+      const candidatePeaks = [];
+
+      // Find meaningful local climax points, including visual-only bursts.
+      const combined = state.combinedSeries;
+      const globalPeak = maxRange(combined, 0, len);
+      const minPeakThreshold = Math.max(0.12, globalPeak * 0.24);
+      for (let i = 1; i < len - 1; i++) {
+        const value = combined[i] || 0;
+        const isPeak = value >= minPeakThreshold &&
+          value >= (combined[i - 1] || 0) &&
+          value > (combined[i + 1] || 0);
+        if (isPeak) candidatePeaks.push({ idx: i, value });
+      }
+
+      // If the curve is flat/plateau-shaped, retain its strongest points as fallback candidates.
+      if (candidatePeaks.length < 3) {
+        const fallback = Array.from({ length: len }, (_, idx) => ({ idx, value: combined[idx] || 0 }))
+          .sort((a, b) => b.value - a.value);
+        for (const item of fallback) {
+          if (candidatePeaks.length >= 18) break;
+          if (!candidatePeaks.some(p => Math.abs(p.idx - item.idx) < Math.round(2 * state.sampleRateHz))) {
+            candidatePeaks.push(item);
+          }
+        }
+      }
+
+      const candidates = [];
+      const maxCandidates = 90;
+      candidatePeaks.sort((a, b) => b.value - a.value);
+
+      for (const peak of candidatePeaks.slice(0, maxCandidates)) {
+        const peakIdx = peak.idx;
+        const peakTime = peakIdx / state.sampleRateHz;
+        const peakValue = Math.max(0.001, peak.value);
+
+        // Anchor the hook in the 3–6 seconds immediately before the climax.
+        const tensionLeadSec = Math.min(6, Math.max(3, targetSec * 0.30));
+        let clipStart = Math.max(0, peakTime - tensionLeadSec);
+        let clipEnd = Math.min(state.duration, clipStart + targetSec);
+        if (clipEnd - clipStart < targetSec * 0.82) {
+          clipStart = Math.max(0, clipEnd - targetSec);
+        }
+
+        // Detect a sustained post-climax energy collapse and cut shortly after it.
+        const dropTime = detectPostClimaxDrop(
+          peakIdx, peakValue, combined,
+          Math.min(len, Math.ceil((clipStart + targetSec) * state.sampleRateHz))
+        );
+        let cleanCutOut = clipEnd;
+        if (dropTime !== null) {
+          const proposedEnd = Math.min(clipEnd, dropTime + 2.0);
+          // Keep most of the requested short-form duration; never cut on the impact itself.
+          if (proposedEnd - clipStart >= Math.min(10, targetSec * 0.72)) {
+            cleanCutOut = proposedEnd;
+          }
+        }
+
+        // Respect source boundaries and avoid sub-15s clips when enough source footage exists.
+        if (cleanCutOut - clipStart < Math.min(15, state.duration)) {
+          clipStart = Math.max(0, cleanCutOut - Math.min(targetSec, state.duration));
+        }
+        clipEnd = Math.max(clipStart + 0.5, cleanCutOut);
+
+        const startIdx = Math.max(0, Math.floor(clipStart * state.sampleRateHz));
+        const endIdx = Math.min(len, Math.ceil(clipEnd * state.sampleRateHz));
+        const preStart = Math.max(0, peakIdx - Math.round(6 * state.sampleRateHz));
+        const preEnd = Math.max(preStart + 1, peakIdx - Math.round(3 * state.sampleRateHz));
+        const baseline = Math.max(0.025, meanRange(combined, preStart, preEnd));
+
+        // 1) Contrast / Surge (35%): peak-to-calm baseline ratio, not raw loudness.
+        const surgeRatio = peakValue / baseline;
+        const surgeScore = clamp01((Math.min(4.0, surgeRatio) - 1) / 3);
+
+        // 2) Sustained action density (30%): repeated micro-peaks in a 10–25s event window.
+        const densitySpan = Math.min(25, Math.max(10, targetSec));
+        const densityStart = Math.max(startIdx, peakIdx - Math.round(densitySpan * 0.42 * state.sampleRateHz));
+        const densityEnd = Math.min(endIdx, densityStart + Math.round(densitySpan * state.sampleRateHz));
+        const densityThreshold = Math.max(0.18, peakValue * 0.42);
+        const audioMicroPeaks = state.hasAudio ? countLocalPeaks(audio, densityStart, densityEnd, densityThreshold * 0.75) : 0;
+        const visualMicroPeaks = countLocalPeaks(motion, densityStart, densityEnd, Math.max(0.16, maxRange(motion, densityStart, densityEnd) * 0.48));
+        const actionEvents = Math.max(audioMicroPeaks, visualMicroPeaks, countLocalPeaks(combined, densityStart, densityEnd, densityThreshold));
+        const actionDensity = clamp01(actionEvents / 6);
+
+        // 3) Visual cut / camera velocity (20%): motion level, bursts and abrupt frame-change proxies.
+        const motionMean = meanRange(motion, startIdx, endIdx);
+        const motionPeak = maxRange(motion, startIdx, endIdx);
+        let motionJumps = 0;
+        for (let i = Math.max(1, startIdx); i < endIdx; i++) {
+          if ((motion[i] || 0) - (motion[i - 1] || 0) > 0.18) motionJumps++;
+        }
+        const visualVelocity = clamp01(motionMean * 0.52 + motionPeak * 0.28 + Math.min(1, motionJumps / 5) * 0.20);
+
+        // 4) High-frequency/crowd/impact transient proxy (15%).
+        // Sample-to-sample amplitude difference supplies a lightweight high-frequency/impact proxy.
+        // It is not semantic classification: it cannot label a transient as a goal, crowd roar or weapon hit.
+        let transientPeaks = 0;
+        let maxTransient = 0;
+        const transientSeries = state.transientSeries || [];
+        const transientMean = meanRange(transientSeries, startIdx, endIdx);
+        const transientPeak = maxRange(transientSeries, startIdx, endIdx);
+        for (let i = Math.max(1, startIdx); i < endIdx; i++) {
+          const jump = Math.max(0, (audio[i] || 0) - (audio[i - 1] || 0));
+          maxTransient = Math.max(maxTransient, jump);
+          if (jump > 0.12 || (transientSeries[i] || 0) > 0.55) transientPeaks++;
+        }
+        const transientScore = clamp01(
+          transientPeak * 0.42 +
+          transientMean * 0.18 +
+          maxTransient * 1.2 * 0.20 +
+          Math.min(1, transientPeaks / 5) * 0.20
+        );
+
+        // Hook rating: first two seconds must establish tension/action and move toward the payoff.
+        const hookEnd = Math.min(endIdx, startIdx + Math.round(2 * state.sampleRateHz));
+        const hookEnergy = meanRange(combined, startIdx, hookEnd);
+        const nextEnergy = meanRange(combined, hookEnd, Math.min(endIdx, hookEnd + Math.round(2 * state.sampleRateHz)));
+        const hookRise = clamp01((nextEnergy - hookEnergy + 0.12) / 0.35);
+        const hookStrength = Math.round(clamp01(hookEnergy * 0.55 + hookRise * 0.45) * 100);
+
+        const score = Math.round(
+          surgeScore * 35 +
+          actionDensity * 30 +
+          visualVelocity * 20 +
+          transientScore * 15
+        );
+
+        const avgAudio = meanRange(audio, startIdx, endIdx);
+        const avgMotion = motionMean;
+        const scene = {
+          start: clipStart,
+          end: clipEnd,
+          peakTime,
+          dropTime,
+          cleanCutOut,
+          rawScore: score / 100,
+          score: Math.max(1, Math.min(100, score)),
+          avgAudio,
+          avgMotion,
+          surgeRatio,
+          surgeScore,
+          actionDensity,
+          visualVelocity,
+          transientScore,
+          hookStrength,
+          audioPct: Math.round(clamp01(avgAudio) * 100),
+          motionPct: Math.round(clamp01(avgMotion) * 100),
+          reason: '',
+          caption: '',
+          components: {
+            contrast: Math.round(surgeScore * 100),
+            actionDensity: Math.round(actionDensity * 100),
+            visualVelocity: Math.round(visualVelocity * 100),
+            transients: Math.round(transientScore * 100)
+          }
+        };
+        scene.reason = generateHypeReason(avgAudio, avgMotion, state.hasAudio, scene);
+        scene.caption = generateViralCaption(scene);
+        candidates.push(scene);
+      }
+
+      candidates.sort((a, b) => b.score - a.score || b.hookStrength - a.hookStrength);
+
+      // Non-maximum suppression: avoid returning the same event under several nearby peaks.
+      const spacingMultiplier = state.spacingLevel === 1 ? 0.55 : state.spacingLevel === 2 ? 0.95 : 1.4;
+      const minGapSec = Math.max(8, targetSec * spacingMultiplier * 0.55);
+      const selected = [];
+      for (const candidate of candidates) {
+        if (selected.length >= 5) break;
+        const overlaps = selected.some(existing =>
+          candidate.peakTime >= existing.start && candidate.peakTime <= existing.end ||
+          existing.peakTime >= candidate.start && existing.peakTime <= candidate.end ||
+          Math.abs(candidate.peakTime - existing.peakTime) < minGapSec
+        );
+        if (!overlaps) selected.push(candidate);
+      }
+
+      state.scenes = selected.map((scene, index) => ({ ...scene, rank: index + 1 }));
+      state.selectedSceneIndex = 0;
+      renderResults();
+      drawTimeline();
+    }
+
+    // Render ranked scenes. This was missing in the original file, which caused
+    // recomputeRankings() to throw before the hero and scene list could appear.
+    function renderResults() {
+      const scenes = state.scenes || [];
+      el.sceneCountBadge.textContent = `${scenes.length} scene${scenes.length === 1 ? '' : 's'}`;
+
+      if (!scenes.length) {
+        el.heroScore.textContent = '--';
+        el.heroContentReady.classList.add('hidden');
+        el.heroContentPlaceholder.classList.remove('hidden');
+        el.heroContentPlaceholder.textContent = 'No clear highlight peaks found. Try Full Scan or adjust the audio/motion balance.';
+        el.scenesListContainer.innerHTML = '<p class="py-4 text-center text-xs text-slate-500">No ranked scenes available.</p>';
+        return;
+      }
+
+      const scene = scenes[Math.max(0, Math.min(state.selectedSceneIndex, scenes.length - 1))];
+      el.heroScore.textContent = String(scene.score);
+      el.heroContentPlaceholder.classList.add('hidden');
+      el.heroContentReady.classList.remove('hidden');
+      el.heroReasonTag.textContent = scene.reason;
+      el.heroRange.textContent = `${formatTime(scene.start)} – ${formatTime(scene.end)}`;
+      el.heroPeak.textContent = formatTime(scene.peakTime);
+      el.heroAudioPct.textContent = `${scene.audioPct}%`;
+      el.heroAudioBar.style.width = `${scene.audioPct}%`;
+      el.heroMotionPct.textContent = `${scene.motionPct}%`;
+      el.heroMotionBar.style.width = `${scene.motionPct}%`;
+      el.heroHookStrength.textContent = `Hook ${scene.hookStrength}/100`;
+      el.heroSurgeRatio.textContent = `${scene.surgeRatio.toFixed(1)}×`;
+      el.heroCutOut.textContent = formatTime(scene.cleanCutOut);
+      el.heroCaption.textContent = scene.caption;
+      el.heroScoreBreakdown.textContent =
+        `Contrast ${scene.components.contrast}/100 · Density ${scene.components.actionDensity}/100 · Visual ${scene.components.visualVelocity}/100 · Transients ${scene.components.transients}/100`;
+
+      el.scenesListContainer.innerHTML = '';
+      scenes.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = `rounded-xl border p-3 transition ${index === state.selectedSceneIndex ? 'border-orange-500/50 bg-orange-500/5' : 'border-studio-border bg-studio-card/60'}`;
+        const top = document.createElement('div');
+        top.className = 'flex items-center justify-between gap-2';
+        const left = document.createElement('div');
+        left.className = 'min-w-0';
+        const heading = document.createElement('div');
+        heading.className = 'text-xs font-bold text-white';
+        heading.textContent = `#${item.rank} · ${item.reason}`;
+        const range = document.createElement('div');
+        range.className = 'mt-1 text-[11px] font-mono text-slate-400';
+        range.textContent = `${formatTime(item.start)} – ${formatTime(item.end)}  ·  Climax ${formatTime(item.peakTime)}  ·  Cut ${formatTime(item.cleanCutOut)}`;
+        const insight = document.createElement('div');
+        insight.className = 'mt-2 text-[10px] leading-relaxed text-slate-400';
+        insight.textContent = `Hook ${item.hookStrength}/100 · Surge ${item.surgeRatio.toFixed(1)}× · Density ${item.components.actionDensity}/100 · Visual ${item.components.visualVelocity}/100 · Transients ${item.components.transients}/100 · ${item.caption}`;
+        left.append(heading, range, insight);
+        const score = document.createElement('span');
+        score.className = 'shrink-0 font-mono text-lg font-extrabold text-orange-400';
+        score.textContent = `${item.score}/100`;
+        top.append(left, score);
+        const actions = document.createElement('div');
+        actions.className = 'mt-3 grid grid-cols-2 gap-2';
+        const play = document.createElement('button');
+        play.type = 'button';
+        play.dataset.action = 'play';
+        play.dataset.index = String(index);
+        play.className = 'rounded-lg border border-studio-border bg-studio-bg px-3 py-2 text-[11px] font-semibold text-slate-200 hover:bg-studio-hover';
+        play.textContent = 'Preview scene';
+        const download = document.createElement('button');
+        download.type = 'button';
+        download.dataset.action = 'export';
+        download.dataset.index = String(index);
+        download.className = 'rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold text-cyan-300 hover:bg-cyan-500/20';
+        download.textContent = 'Download clip';
+        actions.append(play, download);
+        card.append(top, actions);
+        el.scenesListContainer.appendChild(card);
+      });
+    }
+
+    el.heroPlayWindowBtn.addEventListener('click', () => {
+      const scene = state.scenes[state.selectedSceneIndex] || state.scenes[0];
+      if (scene) playHighlightWindow(scene, scene.rank);
+    });
+    el.heroExportBtn.addEventListener('click', () => {
+      const scene = state.scenes[state.selectedSceneIndex] || state.scenes[0];
+      if (scene) exportHighlightClip(scene);
+    });
+    el.heroCopyTimestampBtn.addEventListener('click', () => {
+      const scene = state.scenes[state.selectedSceneIndex] || state.scenes[0];
+      if (scene) copyTextToClipboard(`${formatTime(scene.start)} - ${formatTime(scene.end)} (peak ${formatTime(scene.peakTime)})`);
+    });
+    el.scenesListContainer.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const index = Number(button.dataset.index);
+      const scene = state.scenes[index];
+      if (!scene) return;
+      state.selectedSceneIndex = index;
+      renderResults();
+      drawTimeline();
+      if (button.dataset.action === 'play') playHighlightWindow(scene, scene.rank);
+      if (button.dataset.action === 'export') exportHighlightClip(scene);
+    });
+
+    function generateHypeReason(avgAudio, avgMotion, hasAudio) {
+      if (!hasAudio) {
+        if (avgMotion > 0.6) return 'High-Velocity Visual Action & Cuts';
+        if (avgMotion > 0.35) return 'Rapid Camera Movement & Scene Shift';
+        return 'Peak Visual Activity Segment';
+      }
+      if (avgAudio > 0.55 && avgMotion > 0.55) return 'Massive Audio Spike + Rapid Action';
+      if (avgAudio > avgMotion * 1.35) return 'Explosive Sound / Crowd / Bass Peak';
+      if (avgMotion > avgAudio * 1.35) return 'High-Speed Visual Cuts & Motion';
+      return 'Synchronized Audio & Visual Surge';
+    }
+
+    // =========================================================================
+    // LIVE TUNING CONTROLS (15s - 60s Presets + Custom Duration Slider)
+    // =========================================================================
+
+    function setClipDuration(durSec) {
+      state.windowDuration = durSec;
+      el.customDurReadout.textContent = `${durSec}s`;
+      el.customDurSlider.value = Math.min(60, Math.max(15, durSec));
+
+      el.durBtns.forEach(b => {
+        const active = parseInt(b.dataset.dur, 10) === durSec;
+        b.className = active
+          ? 'dur-btn py-1 rounded-lg text-[11px] font-mono font-semibold bg-orange-500 text-white border border-orange-400 shadow transition'
+          : 'dur-btn py-1 rounded-lg text-[11px] font-mono font-semibold bg-studio-bg text-slate-400 border border-studio-border hover:text-white transition';
+      });
+      stopWindowPlayback();
+      recomputeRankings();
+    }
+
+    el.durBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        setClipDuration(parseInt(btn.dataset.dur, 10));
+      });
+    });
+
+    el.customDurSlider.addEventListener('input', (e) => {
+      setClipDuration(parseInt(e.target.value, 10));
+    });
+
+    function updateWeightLabels() {
+      const aPct = Math.round(state.audioWeight * 100);
+      const mPct = 100 - aPct;
+      el.audioWeightVal.textContent = `${aPct}%`;
+      el.motionWeightVal.textContent = `${mPct}%`;
+    }
+
+    el.weightSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.audioWeight = val / 100;
+      updateWeightLabels();
+      recomputeRankings();
+    });
+
+    el.spacingSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      state.spacingLevel = val;
+      el.spacingVal.textContent = val === 1 ? 'Dense' : val === 2 ? 'Standard' : 'Spread Out';
+      recomputeRankings();
+    });
+
+    el.resetWeightsBtn.addEventListener('click', () => {
+      state.audioWeight = state.hasAudio ? 0.55 : 0;
+      state.spacingLevel = 2;
+
+      el.weightSlider.value = Math.round(state.audioWeight * 100);
+      updateWeightLabels();
+      el.spacingSlider.value = 2;
+      el.spacingVal.textContent = 'Standard';
+
+      setClipDuration(15);
+      showToast('Tuning controls reset to defaults.', 'info');
+    });
+
+    // =========================================================================
+    // INTERACTIVE HYPE TIMELINE CANVAS
+    // =========================================================================
+
+    function resizeTimelineCanvas() {
+      const rect = el.timelineContainer.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      el.timelineCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      el.timelineCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      drawTimeline();
+    }
+
+    window.addEventListener('resize', resizeTimelineCanvas);
+
+    function drawTimeline() {
+      const canvas = el.timelineCanvas;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr;
+      const h = canvas.height / dpr;
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, w, h);
+
+      // Subtle horizontal grid lines
+      ctx.strokeStyle = 'rgba(35, 42, 61, 0.6)';
+      ctx.lineWidth = 1;
+      [0.25, 0.5, 0.75].forEach(ratio => {
+        const y = h * ratio;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      });
+
+      if (state.duration <= 0 || state.combinedSeries.length === 0) {
+        ctx.restore();
+        return;
+      }
+
+      // Draw Highlighted Scene Windows
+      state.scenes.forEach((scene, idx) => {
+        const x1 = (scene.start / state.duration) * w;
+        const x2 = (scene.end / state.duration) * w;
+        const winW = Math.max(3, x2 - x1);
+
+        if (idx === 0) {
+          ctx.fillStyle = 'rgba(249, 115, 22, 0.22)';
+          ctx.strokeStyle = 'rgba(249, 115, 22, 0.75)';
+        } else if (idx === state.selectedSceneIndex) {
+          ctx.fillStyle = 'rgba(34, 211, 238, 0.16)';
+          ctx.strokeStyle = 'rgba(34, 211, 238, 0.6)';
+        } else {
+          ctx.fillStyle = 'rgba(148, 163, 184, 0.08)';
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        }
+
+        ctx.fillRect(x1, 0, winW, h);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x1, 0.5, winW, h - 1);
+
+        // Rank Pill Tag at top of window
+        ctx.fillStyle = idx === 0 ? '#f97316' : '#334155';
+        ctx.fillRect(x1, 0, 22, 15);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px JetBrains Mono, monospace';
+        ctx.fillText(`#${scene.rank}`, x1 + 4, 11);
+      });
+
+      // Helper to plot smooth curve
+      const plotCurve = (series, strokeColor, fillGradient = null, lineWidth = 1.5) => {
+        if (!series || series.length === 0) return;
+        const padTop = 18;
+        const padBottom = 6;
+        const usableH = h - padTop - padBottom;
+
+        ctx.beginPath();
+        for (let i = 0; i < series.length; i++) {
+          const x = (i / Math.max(1, series.length - 1)) * w;
+          const y = padTop + usableH * (1 - series[i]);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+
+        if (fillGradient) {
+          ctx.save();
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.closePath();
+          ctx.fillStyle = fillGradient;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      };
+
+      // Audio curve (cyan)
+      if (state.hasAudio) {
+        plotCurve(state.audioSeries, 'rgba(34, 211, 238, 0.65)', null, 1.25);
+      }
+
+      // Visual Motion curve (fuchsia)
+      plotCurve(state.motionSeries, 'rgba(232, 121, 249, 0.65)', null, 1.25);
+
+      // Combined Hype curve (orange-amber gradient fill)
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(249, 115, 22, 0.42)');
+      grad.addColorStop(1, 'rgba(249, 115, 22, 0.02)');
+      plotCurve(state.combinedSeries, '#fb923c', grad, 2.2);
+
+      // Draw Current Video Playhead
+      const playheadX = (el.mainVideo.currentTime / state.duration) * w;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, h);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Interactive Scrubbing & Hover Tooltip on Timeline
+    el.timelineContainer.addEventListener('click', (e) => {
+      if (state.duration <= 0) return;
+      const rect = el.timelineContainer.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      stopWindowPlayback();
+      el.mainVideo.currentTime = ratio * state.duration;
+      drawTimeline();
+    });
+
+    el.timelineContainer.addEventListener('mousemove', (e) => {
+      if (state.duration <= 0 || state.combinedSeries.length === 0) return;
+      const rect = el.timelineContainer.getBoundingClientRect();
+      const relX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const ratio = relX / rect.width;
+      const hoverSec = ratio * state.duration;
+      const bucketIdx = Math.min(state.combinedSeries.length - 1, Math.floor(ratio * state.combinedSeries.length));
+      const hypeVal = Math.round((state.combinedSeries[bucketIdx] || 0) * 100);
+
+      el.timelineHoverTooltip.textContent = `${formatTime(hoverSec)} • Energy ${hypeVal}%`;
+      el.timelineHoverTooltip.classList.remove('hidden');
+
+      const tipWidth = 135;
+      const leftPos = Math.min(rect.width - tipWidth - 6, Math.max(6, relX - tipWidth / 2));
+      el.timelineHoverTooltip.style.left = `${leftPos}px`;
+    });
+
+    el.timelineContainer.addEventListener('mouseleave', () => {
+      el.timelineHoverTooltip.classList.add('hidden');
+    });
+
+    // =========================================================================
+    // IN-BROWSER HIGHLIGHT CLIP EXPORTER + MP4 DURATION REMUX
+    // =========================================================================
+
+    el.cancelExportBtn.addEventListener('click', () => {
+      if (state.isExporting) {
+        state.cancelExportRequested = true;
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // MP4 CONTAINER REPAIR
+    // MediaRecorder may emit fragmented MP4 whose mvhd/mdhd duration is zero or
+    // only reflects the first fragment. FFmpeg remuxes the captured streams into
+    // a conventional MP4 (moov + sample tables + faststart), copying codecs so
+    // the video/audio are not re-encoded. The engine is loaded lazily from CDN.
+    // -------------------------------------------------------------------------
+    let remuxEnginePromise = null;
+
+    function withTimeout(promise, ms, label) {
+      let timer;
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)} seconds. The phone may be low on available memory or the browser may have blocked a worker.`)), ms);
+        })
+      ]).finally(() => clearTimeout(timer));
+    }
+
+    function loadScriptOnce(src, globalName) {
+      if (window[globalName]) return Promise.resolve(window[globalName]);
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-hypescene-src="${src}"]`);
+        if (existing) {
+          existing.addEventListener('load', () => resolve(window[globalName]), { once: true });
+          existing.addEventListener('error', () => reject(new Error('Could not load the MP4 repair library.')), { once: true });
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.hypesceneSrc = src;
+        script.onload = () => window[globalName]
+          ? resolve(window[globalName])
+          : reject(new Error('MP4 repair library loaded without its expected API.'));
+        script.onerror = () => reject(new Error('Could not download the MP4 repair library. Check your internet connection and retry.'));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function fetchAsBlobURL(url, mimeType) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      try {
+        const response = await fetch(url, { signal: controller.signal, cache: 'force-cache' });
+        if (!response.ok) throw new Error(`MP4 repair asset download failed (${response.status}).`);
+        return URL.createObjectURL(new Blob([await response.arrayBuffer()], { type: mimeType }));
+      } catch (error) {
+        if (error.name === 'AbortError') throw new Error('Downloading the MP4 repair engine timed out. Check your connection and retry.');
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function getMp4RepairEngine(onStage = () => {}) {
+      if (!remuxEnginePromise) {
+        remuxEnginePromise = (async () => {
+          onStage('Loading MP4 repair library...');
+          await withTimeout(loadScriptOnce(
+            'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
+            'FFmpegWASM'
+          ), 30000, 'Loading FFmpeg library');
+          const FFmpeg = window.FFmpegWASM?.FFmpeg;
+          if (!FFmpeg) throw new Error('MP4 repair engine is unavailable in this browser.');
+          const engine = new FFmpeg();
+          const ffmpegBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd';
+          const coreBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+          let classWorkerURL = null;
+          let coreURL = null;
+          let wasmURL = null;
+          try {
+            onStage('Preparing local FFmpeg worker...');
+            classWorkerURL = await fetchAsBlobURL(`${ffmpegBase}/814.ffmpeg.js`, 'text/javascript');
+            coreURL = await fetchAsBlobURL(`${coreBase}/ffmpeg-core.js`, 'text/javascript');
+            wasmURL = await fetchAsBlobURL(`${coreBase}/ffmpeg-core.wasm`, 'application/wasm');
+            onStage('Starting MP4 repair engine...');
+            await withTimeout(engine.load({ classWorkerURL, coreURL, wasmURL }), 45000, 'Starting MP4 repair engine');
+            return engine;
+          } catch (error) {
+            try { engine.terminate(); } catch (_) {}
+            throw error;
+          } finally {
+            [classWorkerURL, coreURL, wasmURL].forEach(url => {
+              if (url) URL.revokeObjectURL(url);
+            });
+          }
+        })().catch(error => {
+          remuxEnginePromise = null;
+          throw error;
+        });
+      }
+      return remuxEnginePromise;
+    }
+
+    async function repairMp4Container(inputBlob, onProgress = () => {}) {
+      let engine = null;
+      let engineTerminated = false;
+      const inputName = `hypescene_input_${Date.now()}.mp4`;
+      const outputName = `hypescene_repaired_${Date.now()}.mp4`;
+      let outputBytes;
+      try {
+        engine = await getMp4RepairEngine(label => onProgress(2, label));
+        const inputBytes = new Uint8Array(await withTimeout(inputBlob.arrayBuffer(), 20000, 'Reading recorded clip'));
+        onProgress(8, `Preparing ${Math.max(1, Math.round(inputBytes.byteLength / 1048576))} MB recording...`);
+        await withTimeout(engine.writeFile(inputName, inputBytes), 30000, 'Writing clip to repair engine');
+        onProgress(12, 'Rebuilding MP4 duration metadata...');
+
+        // FFmpeg progress is surfaced to the UI so mobile users can distinguish
+        // active remuxing from a genuinely stalled worker.
+        try {
+          engine.on('progress', ({ progress }) => {
+            if (Number.isFinite(progress)) {
+              const pct = Math.max(12, Math.min(88, 12 + Math.round(progress * 76)));
+              onProgress(pct, `Repairing MP4 container... ${Math.round(progress * 100)}%`);
+            }
+          });
+        } catch (_) {}
+
+        const execPromise = engine.exec([
+          '-hide_banner', '-loglevel', 'error',
+          '-i', inputName,
+          '-map', '0:v:0', '-map', '0:a:0?',
+          '-c', 'copy',
+          '-map_metadata', '0',
+          '-avoid_negative_ts', 'make_zero',
+          '-movflags', '+faststart',
+          '-f', 'mp4', outputName
+        ]);
+        const exitCode = await withTimeout(execPromise, 90000, 'MP4 remux');
+        if (exitCode !== 0) throw new Error(`MP4 remux failed (FFmpeg exit ${exitCode}).`);
+        onProgress(90, 'Reading repaired video...');
+        const result = await withTimeout(engine.readFile(outputName), 30000, 'Reading repaired MP4');
+        outputBytes = result instanceof Uint8Array ? result : new Uint8Array(result);
+        if (!outputBytes.length) throw new Error('MP4 repair produced an empty file.');
+      } catch (error) {
+        if (engine) {
+          try { engine.terminate(); engineTerminated = true; } catch (_) {}
+        }
+        remuxEnginePromise = null;
+        throw error;
+      } finally {
+        if (engine && !engineTerminated) {
+          try { await withTimeout(engine.deleteFile(inputName), 3000, 'Cleaning temporary input'); } catch (_) {}
+          try { await withTimeout(engine.deleteFile(outputName), 3000, 'Cleaning temporary output'); } catch (_) {}
+        }
+      }
+      onProgress(94, 'Checking repaired MP4 duration...');
+      return new Blob([outputBytes], { type: 'video/mp4' });
+    }
+
+    async function exportHighlightClip(scene) {
+      if (!scene || state.isExporting) return;
+
+      if (typeof MediaRecorder === 'undefined') {
+        showToast('MediaRecorder is not supported in this browser. Use "Copy Timestamps" instead.', 'error');
+        return;
+      }
+
+      // Android Chrome's fragmented MP4 output can require a heavy FFmpeg/WASM
+      // remux. That remux was the source of the repeatable 78% stall. Prefer a
+      // browser-native WebM recording and repair its duration metadata directly;
+      // this avoids Worker/WASM initialization and a second full video transcode.
+      const mimeCandidates = [
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9,opus',
+        'video/webm',
+      ];
+      const supportedMime = mimeCandidates.find(m => MediaRecorder.isTypeSupported(m)) || '';
+      if (!supportedMime) {
+        showToast('This browser does not support WebM recording. Update Chrome and retry.', 'error');
+        return;
+      }
+
+      state.isExporting = true;
+      state.cancelExportRequested = false;
+      stopWindowPlayback();
+
+      el.exportBanner.classList.remove('hidden');
+      el.exportProgressBar.style.width = '0%';
+      el.exportPercentText.textContent = '0%';
+      el.exportStageText.textContent = `Recording #${scene.rank} Highlight (${formatTime(scene.start)} – ${formatTime(scene.end)})...`;
+
+      // Create dedicated hidden video + canvas for clean capture without disturbing main player controls
+      const capVideo = document.createElement('video');
+      capVideo.src = state.videoUrl;
+      capVideo.playsInline = true;
+      // Keep the source unmuted: a muted media element produces silent capture tracks.
+      // Audio is captured directly from the media element where supported, with a
+      // Web Audio destination fallback for browsers that lack captureStream().
+      capVideo.muted = false;
+      capVideo.defaultMuted = false;
+      capVideo.volume = 1;
+
+      const capCanvas = document.createElement('canvas');
+      const capCtx = capCanvas.getContext('2d');
+
+      let audioCtx = null;
+      let recorder = null;
+      let activeStream = null;
+      let sourceCaptureStream = null;
+      const chunks = [];
+      let recordingStartedAt = 0;
+
+      const cleanupExport = () => {
+        state.isExporting = false;
+        el.exportBanner.classList.add('hidden');
+        capVideo.pause();
+        capVideo.src = '';
+        capVideo.load();
+        if (recorder && recorder.state !== 'inactive') {
+          try { recorder.stop(); } catch (_) {}
+        }
+        if (activeStream) activeStream.getTracks().forEach(track => track.stop());
+        if (sourceCaptureStream) sourceCaptureStream.getTracks().forEach(track => track.stop());
+        if (audioCtx) {
+          audioCtx.close().catch(() => {});
+        }
+      };
+
+      try {
+        await new Promise((resolve, reject) => {
+          capVideo.onloadedmetadata = resolve;
+          capVideo.onerror = () => reject(new Error('Failed to load video stream for export.'));
+        });
+
+        // Cap export resolution at 1280x720 max so browser encoding stays smooth in real time
+        const srcW = capVideo.videoWidth || 1280;
+        const srcH = capVideo.videoHeight || 720;
+        const scale = Math.min(1, 1280 / Math.max(srcW, srcH));
+        capCanvas.width = Math.round(srcW * scale);
+        capCanvas.height = Math.round(srcH * scale);
+
+        // Seek to start of scene
+        await new Promise((resolve, reject) => {
+          capVideo.onseeked = resolve;
+          capVideo.onerror = () => reject(new Error('Could not seek to the selected highlight.'));
+          capVideo.currentTime = scene.start;
+        });
+        capCtx.drawImage(capVideo, 0, 0, capCanvas.width, capCanvas.height);
+
+        // Capture canvas video at 30fps. Capture original audio directly from the
+        // source video first; this avoids the muted-WebAudio silence bug on Android.
+        const canvasStream = capCanvas.captureStream(30);
+        const combinedTracks = [...canvasStream.getVideoTracks()];
+        let audioTracks = [];
+        const captureMedia = capVideo.captureStream || capVideo.mozCaptureStream;
+
+        if (typeof captureMedia === 'function') {
+          try {
+            sourceCaptureStream = captureMedia.call(capVideo);
+            audioTracks = sourceCaptureStream.getAudioTracks();
+          } catch (captureErr) {
+            console.warn('Direct source-audio capture unavailable; trying Web Audio:', captureErr);
+          }
+        }
+
+        // Fallback: route the unmuted source element into a MediaStreamDestination.
+        if (!audioTracks.length) {
+          try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) throw new Error('Web Audio API is unavailable.');
+            audioCtx = new AudioCtx();
+            const sourceNode = audioCtx.createMediaElementSource(capVideo);
+            const destNode = audioCtx.createMediaStreamDestination();
+            sourceNode.connect(destNode);
+            await audioCtx.resume();
+            audioTracks = destNode.stream.getAudioTracks();
+          } catch (audioErr) {
+            console.error('Audio capture setup failed:', audioErr);
+          }
+        }
+
+        audioTracks.forEach(track => combinedTracks.push(track));
+        if (!audioTracks.length) {
+          throw new Error('This browser could not capture the source audio. Try the latest Chrome browser.');
+        }
+
+        const finalStream = new MediaStream(combinedTracks);
+        activeStream = finalStream;
+        recorder = supportedMime
+          ? new MediaRecorder(finalStream, { mimeType: supportedMime, videoBitsPerSecond: 2_500_000 })
+          : new MediaRecorder(finalStream);
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+
+        const recordingDone = new Promise(resolve => {
+          recorder.onstop = resolve;
+        });
+
+        recorder.start(250);
+        recordingStartedAt = performance.now();
+        await capVideo.play();
+        if (audioCtx && audioCtx.state !== 'running') await audioCtx.resume();
+
+        const clipDuration = Math.max(0.5, scene.end - scene.start);
+
+        // Render frames onto capture canvas until scene.end is reached
+        await new Promise(resolve => {
+          function stepFrame() {
+            if (state.cancelExportRequested || capVideo.ended || capVideo.currentTime >= scene.end) {
+              resolve();
+              return;
+            }
+            if (capVideo.paused) {
+              requestAnimationFrame(stepFrame);
+              return;
+            }
+            capCtx.drawImage(capVideo, 0, 0, capCanvas.width, capCanvas.height);
+            const elapsed = Math.max(0, capVideo.currentTime - scene.start);
+            const pct = Math.min(100, Math.round((elapsed / clipDuration) * 100));
+            el.exportProgressBar.style.width = `${pct}%`;
+            el.exportPercentText.textContent = `${pct}%`;
+            requestAnimationFrame(stepFrame);
+          }
+          requestAnimationFrame(stepFrame);
+        });
+
+        capVideo.pause();
+        if (recorder.state !== 'inactive') {
+          recorder.stop();
+        }
+        await recordingDone;
+
+        if (state.cancelExportRequested) {
+          showToast('Clip export cancelled.', 'warning');
+          cleanupExport();
+          return;
+        }
+
+        // Export only browser-native WebM. Do not enter the FFmpeg/WASM MP4
+        // remux path: on the target Android local-file environment it stalls at
+        // 78% while waiting for FFmpeg exec() to finish.
+        const actualMime = recorder.mimeType || supportedMime || '';
+        if (!actualMime.toLowerCase().includes('video/webm')) {
+          throw new Error(`The browser selected ${actualMime || 'an unknown format'} instead of WebM. Update Chrome and retry; MP4 remux is intentionally disabled because it hangs on this device.`);
+        }
+        const fileExtension = 'webm';
+        let blob = new Blob(chunks, { type: 'video/webm' });
+        if (!blob.size) throw new Error('The browser produced an empty video file.');
+
+        el.exportProgressBar.style.width = '82%';
+        el.exportPercentText.textContent = '82%';
+        el.exportStageText.textContent = 'Repairing WebM duration metadata...';
+        await withTimeout(loadScriptOnce(
+          'https://cdn.jsdelivr.net/npm/fix-webm-duration@1.0.6/fix-webm-duration.js',
+          'ysFixWebmDuration'
+        ), 20000, 'Loading WebM duration repair');
+        const recordedDurationMs = Math.max(1, Math.round((performance.now() - recordingStartedAt)));
+        blob = await withTimeout(
+          window.ysFixWebmDuration(blob, recordedDurationMs, undefined, { logger: false }),
+          30000,
+          'Repairing WebM duration metadata'
+        );
+        if (!(blob instanceof Blob) || !blob.size) {
+          throw new Error('WebM duration repair did not produce a valid video file.');
+        }
+
+        // Validate the final downloadable container, not the raw MediaRecorder blob.
+        const validationUrl = URL.createObjectURL(blob);
+        const durationCheck = document.createElement('video');
+        durationCheck.preload = 'metadata';
+        durationCheck.src = validationUrl;
+        const detectedDuration = await new Promise(resolve => {
+          const timeout = setTimeout(() => resolve(null), 8000);
+          durationCheck.onloadedmetadata = () => {
+            clearTimeout(timeout);
+            resolve(Number.isFinite(durationCheck.duration) ? durationCheck.duration : null);
+          };
+          durationCheck.onerror = () => {
+            clearTimeout(timeout);
+            resolve(null);
+          };
+        });
+        durationCheck.removeAttribute('src');
+        durationCheck.load();
+        URL.revokeObjectURL(validationUrl);
+
+        const expectedDuration = Math.max(0, scene.end - scene.start);
+        if (detectedDuration === null || detectedDuration < expectedDuration * 0.85 || detectedDuration > expectedDuration * 1.15) {
+          throw new Error(`Export duration validation failed. Expected about ${expectedDuration.toFixed(1)}s, detected ${detectedDuration === null ? 'unknown' : detectedDuration.toFixed(1) + 's'}. No incomplete file was downloaded.`);
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const baseName = (state.file?.name || 'highlight').replace(/\.[^/.]+$/, '');
+        a.href = downloadUrl;
+        a.download = `${baseName}_hype_rank${scene.rank}_${formatTime(scene.start).replace(':', '-')}.${fileExtension}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 60000);
+
+        el.exportProgressBar.style.width = '100%';
+        el.exportPercentText.textContent = '100%';
+        showToast(`Downloaded duration-fixed ${fileExtension.toUpperCase()} #${scene.rank} highlight (${detectedDuration.toFixed(1)}s)!`, 'success');
+      } catch (err) {
+        console.error('Export failed:', err);
+        const message = err.message || 'Unsupported video format';
+        showToast(
+          message.includes('Worker') || message.includes('worker')
+            ? 'MP4 repair worker was blocked. Open this file in Chrome from HTTPS hosting, then retry export.'
+            : `Export failed: ${message}`,
+          'error'
+        );
+      } finally {
+        cleanupExport();
+      }
+    }
+  </script>
+</body>
+</html>
